@@ -1,0 +1,88 @@
+
+SET LINESIZE 79
+SET PAGESIZE 50
+HEADING ON
+
+
+
+TTITLE -
+CENTER 'Staff Workload Summary Report' -
+SKIP 1 -
+RIGHT 'Date: ' _DATE -
+SKIP 1 -
+RIGHT 'Page ' SQL.PNO -
+SKIP 2
+
+
+COLUMN StaffID FORMAT A20 HEADING 'STAFF ID'
+COLUMN FirstName FORMAT A20 HEADING 'First Name'
+COLUMN LastName FORMAT A20 HEADING 'Last Name'
+COLUMN TotalWorkHours FORMAT 999.99 HEADING 'TOTAL WORK HOURS'
+
+REPFOOTER SKIP 1 CENTER '----- End  -----';
+
+
+
+DROP INDEX idx_staff_id;
+CREATE INDEX idx_staff_id ON Staffs(StaffID);
+
+
+
+SELECT 
+    s.StaffID, 
+    s.FirstName, 
+    s.LastName, 
+    SUM(
+        EXTRACT(DAY FROM (w.WorkEndTime - w.WorkStartTime)) * 24 +  -- Days to hours
+        EXTRACT(HOUR FROM (w.WorkEndTime - w.WorkStartTime)) +      -- Add hours
+        EXTRACT(MINUTE FROM (w.WorkEndTime - w.WorkStartTime)) / 60 -- Convert minutes to hours
+    ) AS TotalWorkHours
+FROM Staffs s
+JOIN Workloads w ON s.StaffID = w.StaffID
+GROUP BY s.StaffID, s.FirstName, s.LastName
+ORDER BY TotalWorkHours DESC;
+
+
+
+
+
+
+CREATE OR REPLACE VIEW Staff_Workload_Hours AS
+SELECT 
+    s.StaffID, 
+    s.FirstName, 
+    s.LastName, 
+    SUM(
+        EXTRACT(DAY FROM (w.WorkEndTime - w.WorkStartTime)) * 24 +  -- Days to hours
+        EXTRACT(HOUR FROM (w.WorkEndTime - w.WorkStartTime)) +      -- Add hours
+        EXTRACT(MINUTE FROM (w.WorkEndTime - w.WorkStartTime)) / 60 -- Convert minutes to hours
+    ) AS TotalWorkHours
+FROM Staffs s
+JOIN Workloads w ON s.StaffID = w.StaffID
+GROUP BY s.StaffID, s.FirstName, s.LastName;
+
+
+TTITLE OFF;
+REPFOOTER OFF;
+
+
+WITH CategorizedStaff AS (
+    SELECT
+        CASE
+            WHEN TotalWorkHours BETWEEN 0 AND 20 THEN '0-20 Hours'
+            WHEN TotalWorkHours BETWEEN 21 AND 40 THEN '21-40 Hours'
+            WHEN TotalWorkHours BETWEEN 41 AND 60 THEN '41-60 Hours'
+            WHEN TotalWorkHours BETWEEN 61 AND 80 THEN '61-80 Hours'
+            WHEN TotalWorkHours BETWEEN 81 AND 100 THEN '81-100 Hours'
+            WHEN TotalWorkHours > 100 THEN 'Over 100 Hours'
+        END AS HoursCategory
+    FROM Staff_Workload_Hours
+)
+SELECT
+    HoursCategory,
+    COUNT(*) AS NumberOfStaff
+FROM CategorizedStaff
+GROUP BY HoursCategory;
+
+
+

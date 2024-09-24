@@ -1,0 +1,84 @@
+-- Set up formatting for the report
+SET LINESIZE 200
+SET PAGESIZE 200
+SET SERVEROUTPUT ON
+
+drop procedure AssignMaintenanceEvent;
+drop sequence EventID_seqProcedure;
+
+CREATE SEQUENCE EventID_seqProcedure
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE;
+
+CREATE OR REPLACE PROCEDURE AssignMaintenanceEvent (
+    p_EventID     IN VARCHAR2,
+    p_AirplaneID  IN VARCHAR2,
+    p_PartID      IN VARCHAR2,
+    p_EventDate   IN DATE,
+    p_TotalAmount IN NUMBER
+)
+IS
+    v_EventID VARCHAR2(10);
+    v_AirplaneCount NUMBER;
+    v_PartCount NUMBER;
+BEGIN
+    -- Check if the AirplaneID exists in the Airplane table
+    SELECT COUNT(*) INTO v_AirplaneCount 
+    FROM Airplane
+    WHERE AirplaneID = p_AirplaneID;
+
+    IF v_AirplaneCount = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Error: AirplaneID ' || p_AirplaneID || ' does not exist.');
+    END IF;
+
+    -- Check if the PartID exists in the Parts table
+    SELECT COUNT(*) INTO v_PartCount 
+    FROM Parts
+    WHERE PartID = p_PartID;
+
+    IF v_PartCount = 0 THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Error: PartID ' || p_PartID || ' does not exist.');
+    END IF;
+
+    -- Check if a maintenance event with the same EventID already exists
+    BEGIN
+        SELECT EventID
+        INTO v_EventID
+        FROM MaintenanceEvent
+        WHERE EventID = p_EventID;
+
+        -- If an event with the same EventID exists, update it
+        UPDATE MaintenanceEvent
+        SET AirplaneID = p_AirplaneID,
+            PartID = p_PartID,
+            EventDate = p_EventDate,
+            TotalAmount = p_TotalAmount
+        WHERE EventID = p_EventID;
+
+        DBMS_OUTPUT.PUT_LINE('Maintenance event updated for EventID: ' || p_EventID);
+
+    EXCEPTION
+        -- If no maintenance event exists, insert a new one
+        WHEN NO_DATA_FOUND THEN
+            INSERT INTO MaintenanceEvent (EventID, AirplaneID, PartID, EventDate, TotalAmount)
+            VALUES (p_EventID, p_AirplaneID, p_PartID, p_EventDate, p_TotalAmount);
+            
+            DBMS_OUTPUT.PUT_LINE('New maintenance event added with EventID: ' || p_EventID);
+    END;
+    
+EXCEPTION
+    -- Handle any other unexpected errors
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20003, 'This Maintenance event ID is not valid ');
+END;
+/
+
+-- Update
+EXEC AssignMaintenanceEvent('ME120', 'AP020', 'PA021', TO_DATE('2024-12-10', 'YYYY-MM-DD'), 3000.00);
+
+-- Add
+EXEC AssignMaintenanceEvent('ME121', 'AP029', 'PA020', TO_DATE('2025-12-10', 'YYYY-MM-DD'), 1500.00);
+
+-- Display Error
+EXEC AssignMaintenanceEvent('ME121', 'AP031', 'PA022', TO_DATE('2025-01-10', 'YYYY-MM-DD'), 1000.00);

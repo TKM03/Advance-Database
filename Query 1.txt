@@ -1,0 +1,106 @@
+
+SET LINESIZE 109
+SET PAGESIZE 200
+HEADING ON
+       
+
+
+DROP INDEX IF EXISTS idx_flight_airplane;
+
+CREATE INDEX idx_flight_airplane ON Flights(AirplaneID, FlightID);
+
+
+
+TTITLE -
+CENTER 'Analysis of Maintenance Costs per Flight Hour by Airplane Model' -
+SKIP 1 -
+RIGHT 'Date: ' _DATE -
+SKIP 1 -
+RIGHT 'Page ' SQL.PNO -
+SKIP 2
+
+
+
+COLUMN AirplaneModel FORMAT A30 HEADING 'Airplane Model'
+COLUMN TotalFlightHours FORMAT 999999.99 HEADING 'Total Flight Hours'
+COLUMN TotalMaintenanceCost FORMAT 999999.99 HEADING 'Total Maintenance Cost'
+COLUMN AvgMCostPerFlightHour FORMAT 999999.99 HEADING 'Avg Maintenance Cost per Flight Hour'
+
+REPFOOTER SKIP 1 CENTER '----- End  -----';
+
+
+
+
+WITH FlightHours AS (
+    SELECT 
+        a.Model AS AirplaneModel,
+        SUM(
+            EXTRACT(DAY FROM (f.ArrivalDateTime - f.DepartureDateTime)) * 24 +  -- Convert days to hours
+            EXTRACT(HOUR FROM (f.ArrivalDateTime - f.DepartureDateTime)) +      -- Add hours
+            EXTRACT(MINUTE FROM (f.ArrivalDateTime - f.DepartureDateTime)) / 60 -- Add minutes converted to hours
+        ) AS TotalFlightHours
+    FROM Airplane a
+    JOIN Flights f ON a.AirplaneID = f.AirplaneID
+    GROUP BY a.Model
+),
+MaintenanceCost AS (
+    SELECT 
+        a.Model AS AirplaneModel,
+        SUM(m.TotalAmount) AS TotalMaintenanceCost
+    FROM Airplane a
+    JOIN MaintenanceEvent m ON a.AirplaneID = m.AirplaneID
+    GROUP BY a.Model
+)
+SELECT 
+    fh.AirplaneModel,
+    fh.TotalFlightHours,
+    mc.TotalMaintenanceCost,
+    ROUND(mc.TotalMaintenanceCost / NULLIF(fh.TotalFlightHours, 0), 2) AS AvgMCostPerFlightHour
+FROM FlightHours fh
+JOIN MaintenanceCost mc ON fh.AirplaneModel = mc.AirplaneModel
+ORDER BY AvgMCostPerFlightHour DESC;
+
+
+
+
+
+
+CREATE OR REPLACE VIEW Maintenance_vs_FlightHours AS
+WITH FlightHours AS (
+    SELECT 
+        a.Model AS AirplaneModel,
+        SUM(
+            EXTRACT(DAY FROM (f.ArrivalDateTime - f.DepartureDateTime)) * 24 +  -- Convert days to hours
+            EXTRACT(HOUR FROM (f.ArrivalDateTime - f.DepartureDateTime)) +      -- Add hours
+            EXTRACT(MINUTE FROM (f.ArrivalDateTime - f.DepartureDateTime)) / 60 -- Add minutes converted to hours
+        ) AS TotalFlightHours
+    FROM Airplane a
+    JOIN Flights f ON a.AirplaneID = f.AirplaneID
+    GROUP BY a.Model
+),
+MaintenanceCost AS (
+    SELECT 
+        a.Model AS AirplaneModel,
+        SUM(m.TotalAmount) AS TotalMaintenanceCost
+    FROM Airplane a
+    JOIN MaintenanceEvent m ON a.AirplaneID = m.AirplaneID
+    GROUP BY a.Model
+)
+SELECT 
+    fh.AirplaneModel,
+    fh.TotalFlightHours,
+    mc.TotalMaintenanceCost,
+    ROUND(mc.TotalMaintenanceCost / NULLIF(fh.TotalFlightHours, 0), 2) AS AvgMCostPerFlightHour
+FROM FlightHours fh
+JOIN MaintenanceCost mc ON fh.AirplaneModel = mc.AirplaneModel
+ORDER BY AvgMCostPerFlightHour DESC;
+
+
+
+
+SELECT *
+FROM Maintenance_vs_FlightHours;
+
+
+TTITLE OFF;
+REPFOOTER OFF;

@@ -1,0 +1,56 @@
+-- Set up formatting for the report
+SET LINESIZE 200
+SET PAGESIZE 200
+SET SERVEROUTPUT ON
+
+drop procedure CancelBooking;
+
+CREATE OR REPLACE PROCEDURE CancelBooking (
+    p_BookingID IN VARCHAR2
+)
+IS
+    v_count NUMBER;
+BEGIN
+    -- Show and Check
+    DBMS_OUTPUT.PUT_LINE('Checking if booking exists for BookingID: ' || p_BookingID);
+
+    -- Check if the booking exists before attempting to delete it
+    SELECT COUNT(*) INTO v_count
+    FROM Booking
+    WHERE BookingID = p_BookingID;
+
+    IF v_count = 0 THEN
+        -- Raise an error if the booking doesn't exist
+        DBMS_OUTPUT.PUT_LINE('No booking found for BookingID: ' || p_BookingID);
+        RAISE_APPLICATION_ERROR(-20001, 'Booking ID not found. Cancellation failed.');
+    ELSE
+        -- Debugging message
+        DBMS_OUTPUT.PUT_LINE('Booking exists. Proceeding to cancel BookingID: ' || p_BookingID);
+
+        -- Proceed to delete the booking
+        DELETE FROM Booking
+        WHERE BookingID = p_BookingID;
+
+        DBMS_OUTPUT.PUT_LINE('Booking canceled for BookingID: ' || p_BookingID);
+    END IF;
+
+-- EXCEPTION
+--    WHEN OTHERS THEN
+--        RAISE_APPLICATION_ERROR(-20002, 'An error occurred while canceling the booking.');
+END;
+/
+
+
+--INSERT INTO Booking VALUES ('B120', 'PR120', 'M030', 6900.00, TO_DATE('2055-03-01', 'YYYY-MM-DD'));
+
+--Successfully Cancel booking
+EXEC CancelBooking('B120'); 
+
+--Show Invalid BookingID
+EXEC CancelBooking('B122'); 
+
+
+
+
+
+

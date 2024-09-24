@@ -1,0 +1,39 @@
+-- Set up formatting for the report
+SET LINESIZE 180
+SET PAGESIZE 150
+SET SERVEROUTPUT ON
+
+-- Title formatting for the report
+TTITLE LEFT 'Flight Delay Analysis by Route' SKIP 2
+
+-- Column formatting for the report
+COLUMN RouteID              FORMAT A10 HEADING 'Route ID'
+COLUMN DepartureLocation    FORMAT A20 HEADING 'Departure Location'
+COLUMN ArrivalLocation      FORMAT A20 HEADING 'Arrival Location'
+COLUMN AverageDelay         FORMAT 9999.99 HEADING 'Avg Delay (Hrs)'
+
+-- Create or replace a view for Flight Delay Analysis by Route
+CREATE OR REPLACE VIEW FlightDelayAnalysis AS
+SELECT 
+    r.RouteID AS RouteID,
+    r.DepartureLocation AS DepartureLocation,
+    r.ArrivalLocation AS ArrivalLocation,
+    AVG(EXTRACT(HOUR FROM (f.ArrivalDateTime - f.DepartureDateTime)) - r.Duration) AS AverageDelay
+FROM 
+    Routes r
+JOIN 
+    Flights f ON r.RouteID = f.RouteID
+WHERE 
+    (EXTRACT(HOUR FROM (f.ArrivalDateTime - f.DepartureDateTime)) > r.Duration)
+GROUP BY 
+    r.RouteID, r.DepartureLocation, r.ArrivalLocation
+ORDER BY 
+    AverageDelay DESC;
+
+-- Displaying the result from the view
+SELECT * FROM FlightDelayAnalysis;
+
+-- Turn off title and formatting settings
+TTITLE OFF
+CLEAR COLUMNS
+CLEAR BREAKS;

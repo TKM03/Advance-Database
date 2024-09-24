@@ -1,0 +1,200 @@
+
+DROP SEQUENCE Workloads_SEQ;
+
+CREATE SEQUENCE Workloads_SEQ
+START WITH 321
+INCREMENT BY 1;
+
+
+DROP INDEX idx_Workloads_SID_FID_Role;
+DROP INDEX idx_Flights_Arrival_Dt;
+
+CREATE INDEX idx_Workloads_SID_FID_Role ON Workloads (StaffID, FlightID, Role);
+CREATE INDEX idx_Flights_Arrival_Dt ON Flights (ArrivalDateTime, DepartureDateTime);
+
+
+
+DROP FUNCTION CalculatePilotHours;
+
+
+CREATE OR REPLACE FUNCTION CalculatePilotHours(p_FlightID IN VARCHAR2) 
+RETURN NUMBER IS
+
+    v_FlightDurationInterval INTERVAL DAY TO SECOND;
+    v_FlightDurationInHours NUMBER;
+
+BEGIN
+    
+    SELECT (ArrivalDateTime - DepartureDateTime)
+    INTO v_FlightDurationInterval
+    FROM Flights
+    WHERE FlightID = p_FlightID;
+
+
+    v_FlightDurationInHours := EXTRACT(DAY FROM v_FlightDurationInterval) * 24 +
+                               EXTRACT(HOUR FROM v_FlightDurationInterval) +
+                               EXTRACT(MINUTE FROM v_FlightDurationInterval) / 60 +
+                               EXTRACT(SECOND FROM v_FlightDurationInterval) / 3600;
+
+    RETURN ROUND(v_FlightDurationInHours, 2);
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error Message: ' || SQLERRM);
+        RETURN NULL;
+
+END CalculatePilotHours;
+/
+
+
+
+
+
+DROP PROCEDURE AssignStaffToFlight;
+
+
+CREATE OR REPLACE PROCEDURE AssignStaffToFlight(
+    p_StaffID       IN VARCHAR2,
+    p_FlightID      IN VARCHAR2,
+    p_Role          IN VARCHAR2,
+    p_AssignedDate  IN DATE,
+    p_WorkStartTime IN TIMESTAMP,
+    p_WorkEndTime   IN TIMESTAMP
+) IS
+
+    StaffAlreadyAssigned EXCEPTION;
+    OverlappingAssignment EXCEPTION;
+    PRAGMA EXCEPTION_INIT(StaffAlreadyAssigned, -20001);
+    PRAGMA EXCEPTION_INIT(OverlappingAssignment, -20002);
+
+    v_CountAssignments INTEGER;
+
+    v_FlightDurationInHours NUMBER;
+    v_PilotHours NUMBER;
+    
+BEGIN
+
+    SELECT COUNT(*)
+    INTO v_CountAssignments
+    FROM Workloads
+    WHERE StaffID = p_StaffID
+    AND FlightID = p_FlightID
+    AND Role = p_Role;
+    
+    IF v_CountAssignments > 0 THEN
+
+        RAISE StaffAlreadyAssigned;
+    END IF;
+
+    SELECT COUNT(*)
+    INTO v_CountAssignments
+    FROM Workloads
+    WHERE StaffID = p_StaffID
+    AND (
+        (p_WorkStartTime BETWEEN WorkStartTime AND WorkEndTime) OR
+        (p_WorkEndTime BETWEEN WorkStartTime AND WorkEndTime) OR
+        (WorkStartTime BETWEEN p_WorkStartTime AND p_WorkEndTime) OR
+        (WorkEndTime BETWEEN p_WorkStartTime AND p_WorkEndTime)
+    );
+    
+    IF v_CountAssignments > 0 THEN
+
+        RAISE OverlappingAssignment;
+    END IF;
+    
+    INSERT INTO Workloads (WorkloadID, StaffID, FlightID, Role, AssignedDate, WorkStartTime, WorkEndTime)
+    VALUES ('WL' || Workloads_SEQ.NEXTVAL, p_StaffID, p_FlightID, p_Role, p_AssignedDate, p_WorkStartTime, p_WorkEndTime);
+  
+
+    IF p_Role = 'Pilot' THEN
+        -- Call the function to calculate flight duration
+        v_FlightDurationInHours := CalculatePilotHours(p_FlightID);
+        
+        SELECT COALESCE(SUM(PilotHours), 0)
+        INTO v_PilotHours
+        FROM Workloads
+        WHERE StaffID = p_StaffID
+        AND FlightID = p_FlightID;
+
+        UPDATE Workloads
+        SET PilotHours = v_PilotHours + v_FlightDurationInHours
+        WHERE StaffID = p_StaffID
+        AND FlightID = p_FlightID;
+    END IF;
+    
+EXCEPTION
+
+    WHEN StaffAlreadyAssigned THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Staff is already assigned to this flight with the same role.');
+
+
+    WHEN OverlappingAssignment THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Staff has an overlapping flight assignment.');
+
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error Message: ' || SQLERRM);
+        RAISE_APPLICATION_ERROR(-20003, 'An unexpected error occurred while assigning staff to the flight.');
+END AssignStaffToFlight;
+/
+
+
+
+
+
+
+-- Example assign the staff to flight
+BEGIN
+    BEGIN
+        AssignStaffToFlight(
+            p_StaffID       => 'S002',
+            p_FlightID      => 'FL092',
+            p_Role          => 'Pilot',
+            p_AssignedDate  => TO_DATE('2024-09-06', 'YYYY-MM-DD'),
+            p_WorkStartTime => TO_TIMESTAMP('2024-09-06 08:00:00', 'YYYY-MM-DD HH24:MI:SS'),
+            p_WorkEndTime   => TO_TIMESTAMP('2024-09-06 09:00:00', 'YYYY-MM-DD HH24:MI:SS')
+        );
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Assign Failed: ' || SQLERRM);
+    END;
+END;
+/
+
+BEGIN
+    BEGIN
+        AssignStaffToFlight(
+            p_StaffID       => 'S002',
+            p_FlightID      => 'FL092',
+            p_Role          => 'Pilot',
+            p_AssignedDate  => TO_DATE('2024-09-06', 'YYYY-MM-DD'),
+            p_WorkStartTime => TO_TIMESTAMP('2024-09-06 08:00:00', 'YYYY-MM-DD HH24:MI:SS'),
+            p_WorkEndTime   => TO_TIMESTAMP('2024-09-06 09:00:00', 'YYYY-MM-DD HH24:MI:SS')
+        );
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Assign Failed: ' || SQLERRM);
+    END;
+END;
+/
+
+BEGIN
+    BEGIN
+        AssignStaffToFlight(
+            p_StaffID       => 'S002',
+            p_FlightID      => 'FL093',
+            p_Role          => 'Pilot',
+            p_AssignedDate  => TO_DATE('2024-09-06', 'YYYY-MM-DD'),
+            p_WorkStartTime => TO_TIMESTAMP('2024-09-06 08:00:00', 'YYYY-MM-DD HH24:MI:SS'),
+            p_WorkEndTime   => TO_TIMESTAMP('2024-09-06 09:00:00', 'YYYY-MM-DD HH24:MI:SS')
+        );
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Assign Failed: ' || SQLERRM);
+    END;
+END;
+/
+
+

@@ -1,0 +1,132 @@
+SET LINESIZE 200
+SET PAGESIZE 200
+SET FEEDBACK OFF
+SET VERIFY OFF
+SET HEADING OFF
+SET NEWPAGE 1
+
+SET SERVEROUTPUT ON
+
+COLUMN Year FORMAT 9999 HEADING 'Year'
+COLUMN Month FORMAT 99 HEADING 'Month'
+COLUMN TotalRevenue FORMAT 999,999,999.99 HEADING 'Total Revenue'
+COLUMN CampaignName FORMAT A30 HEADING 'Campaign Name'
+COLUMN RevenueFromPromotion FORMAT 999,999,999.99 HEADING 'Revenue From Promotion'
+COLUMN RevenueWithoutPromotion FORMAT 999,999,999.99 HEADING 'Revenue Without Promotion'
+
+ACCEPT year_choice PROMPT 'Enter the year (e.g., 2023 or 2024): '
+
+DECLARE
+  CURSOR cur_revenue IS
+    SELECT
+        EXTRACT(YEAR FROM b.BookingDate) AS Year,
+        EXTRACT(MONTH FROM b.BookingDate) AS Month,
+        SUM(b.TotalPrice) AS TotalRevenue
+    FROM
+        Booking b
+    WHERE
+        EXTRACT(YEAR FROM b.BookingDate) = &year_choice
+    GROUP BY
+        EXTRACT(YEAR FROM b.BookingDate),
+        EXTRACT(MONTH FROM b.BookingDate)
+    ORDER BY
+        EXTRACT(YEAR FROM b.BookingDate),
+        EXTRACT(MONTH FROM b.BookingDate);
+
+  CURSOR cur_promotion(p_year NUMBER, p_month NUMBER) IS
+    SELECT
+        p.CampaignID,
+        c.CampaignName,
+        SUM(b.TotalPrice) AS RevenueFromPromotion
+    FROM
+        Promotions p
+    JOIN
+        Booking b ON p.PromotionID = b.PromotionID
+    JOIN
+        Campaign c ON p.CampaignID = c.CampaignID
+    WHERE
+        EXTRACT(YEAR FROM b.BookingDate) = p_year AND
+        EXTRACT(MONTH FROM b.BookingDate) = p_month
+    GROUP BY
+        p.CampaignID, 
+        c.CampaignName;
+
+  rec_revenue cur_revenue%ROWTYPE;
+  rec_promotion cur_promotion%ROWTYPE;
+
+  v_total_promotion_revenue NUMBER := 0;
+
+BEGIN
+
+  DBMS_OUTPUT.PUT_LINE('' || RPAD('-', 125, '-') || '');
+  DBMS_OUTPUT.PUT_LINE(
+    '|' || RPAD(' ', 43) || RPAD('Promotional Impact Report for Year ' || '&year_choice', 80, ' ') || '|'
+  );
+  DBMS_OUTPUT.PUT_LINE(
+    '|' || RPAD(' ', 103) || RPAD('Date: ' || TO_CHAR(SYSDATE, 'DD-MON-YYYY'), 20, ' ') || '|'
+  );
+  DBMS_OUTPUT.PUT_LINE('' || RPAD('-', 125, '-') || '');
+  DBMS_OUTPUT.PUT_LINE(' ');
+
+  DBMS_OUTPUT.PUT_LINE(
+    '|Year   | Month | Total Revenue (RM)| Campaign Name                    | Revenue From Promotion | Revenue Without Promotion |'
+  );
+  DBMS_OUTPUT.PUT_LINE(
+    '-----------------------------------------------------------------------------------------------------------------------------'
+  );
+
+  OPEN cur_revenue;
+
+  LOOP
+    FETCH cur_revenue INTO rec_revenue;
+    EXIT WHEN cur_revenue%NOTFOUND;
+
+    v_total_promotion_revenue := 0; 
+    OPEN cur_promotion(rec_revenue.Year, rec_revenue.Month);
+
+    LOOP
+      FETCH cur_promotion INTO rec_promotion;
+      EXIT WHEN cur_promotion%NOTFOUND;
+
+      v_total_promotion_revenue := v_total_promotion_revenue + rec_promotion.RevenueFromPromotion;
+
+      DBMS_OUTPUT.PUT_LINE(
+        RPAD(rec_revenue.Year, 7) || ' | ' ||
+        RPAD(rec_revenue.Month, 5) || ' | ' ||
+        LPAD(TO_CHAR(rec_revenue.TotalRevenue, '999,999,999.99'), 17) || ' | ' ||
+        RPAD(rec_promotion.CampaignName, 32) || ' | ' ||
+        LPAD(TO_CHAR(rec_promotion.RevenueFromPromotion, '999,999,999.99'), 22) || ' | ' ||
+        LPAD(TO_CHAR(rec_revenue.TotalRevenue - v_total_promotion_revenue, '999,999,999.99'), 25) || ' | '
+      );
+    END LOOP;
+
+    CLOSE cur_promotion;
+
+    IF v_total_promotion_revenue = 0 THEN
+      DBMS_OUTPUT.PUT_LINE(
+        RPAD(rec_revenue.Year, 7) || ' | ' ||
+        RPAD(rec_revenue.Month, 5) || ' | ' ||
+        LPAD(TO_CHAR(rec_revenue.TotalRevenue, '999,999,999.99'), 17) || ' | ' ||
+        RPAD('No Promotion', 32) || ' | ' ||
+        LPAD('0.00', 22) || ' | ' ||
+        LPAD(TO_CHAR(rec_revenue.TotalRevenue, '999,999,999.99'), 25) || ' | '
+      );
+    END IF;
+
+  END LOOP;
+
+  CLOSE cur_revenue;
+
+  DBMS_OUTPUT.PUT_LINE(
+    '-----------------------------------------------------------------------------------------------------------------------------'
+  );
+  DBMS_OUTPUT.PUT_LINE(
+    '|' || RPAD(' ', 53) || RPAD('END OF REPORT', 70, ' ') || '|'
+  );
+  DBMS_OUTPUT.PUT_LINE(
+    '-----------------------------------------------------------------------------------------------------------------------------'
+  );
+END;
+/
+
+SET HEADING ON

@@ -1,0 +1,146 @@
+-- Set up formatting for the report
+SET LINESIZE 180;
+SET PAGESIZE 150;
+SET SERVEROUTPUT ON;
+
+-- Title formatting for the report
+TTITLE LEFT 'Airplane Utilization Report by Flight Hours' SKIP 2;
+
+-- Create or replace functions to calculate total and average flight hours
+CREATE OR REPLACE FUNCTION GetTotalFlightHours(p_AirplaneID IN VARCHAR2)
+RETURN NUMBER IS
+    v_TotalFlightHours NUMBER;
+BEGIN
+    SELECT NVL(SUM(EXTRACT(DAY FROM (f.ArrivalDateTime - f.DepartureDateTime)) * 24 + 
+                EXTRACT(HOUR FROM (f.ArrivalDateTime - f.DepartureDateTime)) +
+                EXTRACT(MINUTE FROM (f.ArrivalDateTime - f.DepartureDateTime))), 0)
+    INTO v_TotalFlightHours
+    FROM Flights f
+    WHERE f.AirplaneID = p_AirplaneID;
+
+    RETURN NVL(v_TotalFlightHours, 0);  -- Default to 0 if no data is found
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+    WHEN OTHERS THEN
+        RETURN 0;
+END;
+/
+
+CREATE OR REPLACE FUNCTION GetAverageFlightHours(p_AirplaneID IN VARCHAR2)
+RETURN NUMBER IS
+    v_AverageFlightHours NUMBER;
+BEGIN
+    SELECT NVL(AVG(EXTRACT(DAY FROM (f.ArrivalDateTime - f.DepartureDateTime)) * 24 + 
+                EXTRACT(HOUR FROM (f.ArrivalDateTime - f.DepartureDateTime)) +
+                EXTRACT(MINUTE FROM (f.ArrivalDateTime - f.DepartureDateTime)) / 60), 0)
+    INTO v_AverageFlightHours
+    FROM Flights f
+    WHERE f.AirplaneID = p_AirplaneID;
+
+    RETURN NVL(v_AverageFlightHours, 0);  -- Default to 0 if no data is found
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+    WHEN OTHERS THEN
+        RETURN 0;
+END;
+/
+
+-- Declare cursor for airplane utilization data
+DECLARE
+    CURSOR airplane_cursor IS
+        SELECT AirplaneID, Model
+        FROM Airplane
+        ORDER BY Model;
+
+    v_AirplaneID VARCHAR2(10);
+    v_Model VARCHAR2(50);
+    v_TotalFlightHours NUMBER;
+    v_AverageFlightHours NUMBER;
+    v_MostUsedRoute VARCHAR2(50);
+
+    -- Variables to hold summary values
+    v_GrandTotalFlightHours NUMBER;
+    v_GrandAverageFlightHours NUMBER;
+
+    -- Function to determine the most frequently used route
+    FUNCTION GetMostUsedRoute(p_AirplaneID IN VARCHAR2) RETURN VARCHAR2 IS
+        v_RouteID VARCHAR2(50);
+    BEGIN
+        SELECT RouteID INTO v_RouteID FROM (
+            SELECT RouteID, COUNT(*) AS cnt
+            FROM Flights
+            WHERE AirplaneID = p_AirplaneID
+            GROUP BY RouteID
+            ORDER BY cnt DESC
+        ) WHERE ROWNUM = 1;
+
+        RETURN NVL(v_RouteID, 'No Flights');
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN 'No Flights';
+        WHEN OTHERS THEN
+            RETURN NULL;
+    END;
+
+BEGIN
+    -- Output report header with column names
+    DBMS_OUTPUT.PUT_LINE('Airplane Utilization Report by Flight Hours');
+    DBMS_OUTPUT.PUT_LINE('----------------------------------------------------------------------------------------------------------------');
+    DBMS_OUTPUT.PUT_LINE(
+         RPAD('Airplane ID', 15) || 
+         LPAD('Model', 20) || 
+         LPAD('Total Flight Hours', 25) || 
+         LPAD('Average Flight Hours', 27) || 
+         LPAD('Most Route Uses', 20));
+         
+    DBMS_OUTPUT.PUT_LINE('----------------------------------------------------------------------------------------------------------------');
+
+    OPEN airplane_cursor;
+    LOOP
+        FETCH airplane_cursor INTO v_AirplaneID, v_Model;
+        EXIT WHEN airplane_cursor%NOTFOUND;
+
+        -- Calculate total and average flight hours for the current airplane
+        v_TotalFlightHours := GetTotalFlightHours(v_AirplaneID);
+        v_AverageFlightHours := GetAverageFlightHours(v_AirplaneID);
+        v_MostUsedRoute := GetMostUsedRoute(v_AirplaneID);
+
+        -- Display the airplane only if there are non-zero flight hours
+        IF v_TotalFlightHours > 0 THEN
+            DBMS_OUTPUT.PUT_LINE(
+              RPAD(v_AirplaneID, 15) || 
+              LPAD(v_Model, 20) || 
+              LPAD(TO_CHAR(v_TotalFlightHours, '9999.99'), 25) ||    
+              LPAD(TO_CHAR(v_AverageFlightHours, '9999.99'), 27) ||
+              LPAD(v_MostUsedRoute, 20));
+        END IF;
+
+    END LOOP;
+    CLOSE airplane_cursor;
+
+    -- Calculate and display totals
+    SELECT 
+        SUM(GetTotalFlightHours(AirplaneID)),
+        AVG(GetAverageFlightHours(AirplaneID))
+    INTO 
+        v_GrandTotalFlightHours,
+        v_GrandAverageFlightHours
+    FROM 
+        AirplaneUtilization;
+
+    DBMS_OUTPUT.PUT_LINE('----------------------------------------------------------------------------------------------------------------');
+    DBMS_OUTPUT.PUT_LINE(
+        LPAD('TOTAL', 15) || ' ' ||
+        LPAD('           ', 25) || ' ' ||
+        LPAD(TO_CHAR(v_GrandTotalFlightHours, '9999.99'), 30) || ' ' ||
+        LPAD(TO_CHAR(v_GrandAverageFlightHours, '9999.99'), 24)
+    );
+DBMS_OUTPUT.PUT_LINE('----------------------------------------------------------------------------------------------------------------');
+
+-- End of PL/SQL block
+END;
+/
+TTITLE OFF
+REPFOOTER OFF

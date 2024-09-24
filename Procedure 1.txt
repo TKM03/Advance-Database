@@ -1,0 +1,174 @@
+
+DROP INDEX idx_BDetail_FID_SNumber;
+DROP INDEX idx_Flights_RouteID;
+
+
+CREATE INDEX idx_BDetail_FID_SNumber ON BookingDetail (FlightID, SeatNumber);
+CREATE INDEX idx_Flights_RouteID ON Flights (RouteID);
+
+
+DROP SEQUENCE seq_BookingID;
+
+
+CREATE SEQUENCE seq_BookingID
+START WITH 052
+INCREMENT BY 1
+NOCACHE;
+
+
+CREATE OR REPLACE FUNCTION GenerateBookingID
+RETURN VARCHAR2
+IS
+    v_SeqValue NUMBER;
+    v_BookingID VARCHAR2(10);
+BEGIN
+
+    SELECT seq_BookingID.NEXTVAL INTO v_SeqValue FROM dual;
+    
+    v_BookingID := 'B' || TO_CHAR(v_SeqValue, 'FM099');
+    
+    RETURN v_BookingID;
+END GenerateBookingID;
+/
+
+
+CREATE OR REPLACE FUNCTION CalculateFlightDuration (
+    p_FlightID VARCHAR
+) RETURN NUMBER
+IS
+    v_Duration NUMBER;
+BEGIN
+    SELECT r.Duration INTO v_Duration
+    FROM Flights f
+    JOIN Routes r ON f.RouteID = r.RouteID
+    WHERE f.FlightID = p_FlightID;
+
+    RETURN v_Duration;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20003, 'Flight ID not found.');
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20004, 'An unexpected error occurred in CalculateFlightDuration.');
+END CalculateFlightDuration;
+/
+
+
+DROP PROCEDURE BookFlight;
+
+
+CREATE OR REPLACE PROCEDURE BookFlight (
+    p_WayID          NUMBER,
+    p_PassengerID    VARCHAR,
+    p_FlightID       VARCHAR,
+    p_SeatNumber     NUMBER,
+    p_Class          VARCHAR,
+    p_PolicyID       VARCHAR,
+    p_CheckLuggages  VARCHAR
+)
+IS
+    SeatAlreadyBooked EXCEPTION;
+    PRAGMA EXCEPTION_INIT(SeatAlreadyBooked, -20001);
+
+    seat_count NUMBER;
+    flight_duration NUMBER;
+    price NUMBER;
+    v_BookingID VARCHAR2(10);
+
+BEGIN
+
+    v_BookingID := GenerateBookingID();
+
+
+    SELECT COUNT(*) INTO seat_count
+    FROM BookingDetail
+    WHERE FlightID = p_FlightID AND SeatNumber = p_SeatNumber;
+
+
+    IF seat_count > 0 THEN
+        RAISE SeatAlreadyBooked;
+    END IF;
+
+
+    flight_duration := CalculateFlightDuration(p_FlightID);
+
+
+    price := flight_duration * 10.89;
+
+
+
+    INSERT INTO BookingDetail (
+        WayID, BookingID, PassengerID, FlightID, PolicyID, CheckLuggageID, SeatNumber, Class, Price
+    )
+    VALUES (
+        p_WayID, v_BookingID, p_PassengerID, p_FlightID, p_PolicyID, p_CheckLuggages, p_SeatNumber, p_Class, price
+    );
+
+EXCEPTION
+
+    WHEN SeatAlreadyBooked THEN
+        RAISE_APPLICATION_ERROR(-20001, 'The seat is already booked for this flight.');
+
+
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20002, 'An unexpected error occurred while booking the flight.');
+END BookFlight;
+/
+
+-- Example of booking a flight
+BEGIN
+    BEGIN
+    BookFlight(
+        p_WayID          => 1,
+        p_PassengerID    => 'P010',
+        p_FlightID       => 'FL100',
+        p_SeatNumber     => 15,
+        p_Class          => 'Economy',
+        p_PolicyID       => 'IP002',
+        p_CheckLuggages  => 'CL007'
+    );
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Booking failed: ' || SQLERRM);
+    END;
+END;
+/
+
+
+
+
+BEGIN
+    BEGIN
+    BookFlight(
+        p_WayID          => 1,
+        p_PassengerID    => 'P008',
+        p_FlightID       => 'FL100',
+        p_SeatNumber     => 15,
+        p_Class          => 'Economy',
+        p_PolicyID       => 'IP002',
+        p_CheckLuggages  => 'CL007'
+    );
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Booking failed: ' || SQLERRM);
+    END;
+END;
+/
+
+
+BEGIN
+    BEGIN
+    BookFlight(
+        p_WayID          => 1,
+        p_PassengerID    => 'P009',
+        p_FlightID       => 'FL099',
+        p_SeatNumber     => 15,
+        p_Class          => 'Economy',
+        p_PolicyID       => 'IP002',
+        p_CheckLuggages  => 'CL007'
+    );
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Booking failed: ' || SQLERRM);
+    END;
+END;
+/

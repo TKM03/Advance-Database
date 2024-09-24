@@ -1,0 +1,69 @@
+-- Set up formatting for the report
+SET LINESIZE 180
+SET PAGESIZE 150
+SET SERVEROUTPUT ON
+
+-- Title formatting for the report
+TTITLE LEFT 'Detailed Staff Work Hours ' SKIP 2
+
+-- Column formatting for the report
+COLUMN StaffID           FORMAT A10  HEADING 'Staff ID'
+COLUMN StaffName         FORMAT A20  HEADING 'Staff Name'
+COLUMN Position          FORMAT A20  HEADING 'Staff Name'
+COLUMN TotalHoursWorked  FORMAT 9999 HEADING 'Total Hours Worked'
+COLUMN HoursShortfall    FORMAT 9999 HEADING 'Hours Shortfall'
+COLUMN Status            FORMAT A10  HEADING 'Status'
+COLUMN Ranking           FORMAT 9999 HEADING 'Ranking'
+
+CREATE OR REPLACE FUNCTION CheckCriticalShortfall(shortfall_hours NUMBER) RETURN VARCHAR2 IS
+BEGIN
+    IF shortfall_hours >= 20 THEN
+        RETURN 'Critical';
+    ELSE
+        RETURN 'Normal';
+    END IF;
+END;
+/
+
+-- Create or replace a view for report data
+CREATE OR REPLACE VIEW StaffHoursShortfall AS
+SELECT 
+    S.StaffID AS StaffID,
+    S.FirstName || ' ' || S.LastName AS StaffName,
+    S.Position AS Position,
+    160 AS "Assigned Work Hours",
+    COALESCE(SUM(
+        (EXTRACT(DAY FROM (W.WorkEndTime - W.WorkStartTime)) * 24) +
+        EXTRACT(HOUR FROM (W.WorkEndTime - W.WorkStartTime))
+    ), 0) AS TotalHoursWorked,
+    160 - COALESCE(SUM(
+        (EXTRACT(DAY FROM (W.WorkEndTime - W.WorkStartTime)) * 24) +
+        EXTRACT(HOUR FROM (W.WorkEndTime - W.WorkStartTime))
+    ), 0) AS HoursShortfall,
+    CheckCriticalShortfall(160 - COALESCE(SUM(
+        (EXTRACT(DAY FROM (W.WorkEndTime - W.WorkStartTime)) * 24) +
+        EXTRACT(HOUR FROM (W.WorkEndTime - W.WorkStartTime))
+    ), 0)) AS Status,
+    RANK() OVER (ORDER BY (160 - COALESCE(SUM(
+        (EXTRACT(DAY FROM (W.WorkEndTime - W.WorkStartTime)) * 24) +
+        EXTRACT(HOUR FROM (W.WorkEndTime - W.WorkStartTime))
+    ), 0)) DESC) AS Ranking
+FROM 
+    Staffs S
+LEFT JOIN 
+    Workloads W ON S.StaffID = W.StaffID
+GROUP BY 
+    S.StaffID, S.FirstName, S.LastName, S.Position
+HAVING 
+    COALESCE(SUM(
+        (EXTRACT(DAY FROM (W.WorkEndTime - W.WorkStartTime)) * 24) +
+        EXTRACT(HOUR FROM (W.WorkEndTime - W.WorkStartTime))
+    ), 0) < 160;
+
+-- Displaying the result from the view
+SELECT * FROM StaffHoursShortfall;
+
+-- Turn off title and formatting settings
+TTITLE OFF
+CLEAR COLUMNS
+CLEAR BREAKS

@@ -1,0 +1,2071 @@
+ALTER SESSION SET NLS_DATE_FORMAT='YYYY-MM-DD';
+ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
+
+SET LINESIZE 120;
+SET PAGESIZE 100;
+
+
+-- Dropping existing tables if they exist
+DROP TABLE BookingDetail;
+DROP TABLE CheckLuggages;
+DROP TABLE Booking;
+DROP TABLE Workloads;
+DROP TABLE Flights;
+DROP TABLE MaintenanceEvent;
+DROP TABLE Purchase;
+DROP TABLE Claim;
+DROP TABLE Promotions;
+DROP TABLE InsurancePolicy;
+DROP TABLE Staffs;
+DROP TABLE Items;
+DROP TABLE Airplane;
+DROP TABLE Parts;
+DROP TABLE Routes;
+DROP TABLE Passengers;
+DROP TABLE Campaign;
+DROP TABLE Members;
+
+
+
+
+--parent table
+CREATE TABLE Members (
+    MemberID    VARCHAR(10) PRIMARY KEY NOT NULL,
+    FirstName   VARCHAR(20)             NOT NULL,
+    LastName    VARCHAR(30)             NOT NULL,
+    Email       VARCHAR(30),
+    Phone       VARCHAR(15),
+    Address     VARCHAR(200)            NOT NULL,
+    DateOfBirth DATE                    NOT NULL,
+    MembershipDate DATE,
+    MembershipLevel VARCHAR(50)
+);
+
+CREATE TABLE Campaign (
+    CampaignID     VARCHAR(10) PRIMARY KEY NOT NULL,
+    CampaignName   VARCHAR(50)             NOT NULL,
+    StartDate      DATE                    NOT NULL,
+    EndDate        DATE                    NOT NULL,
+    Description    VARCHAR(50),
+    TargetAudience VARCHAR(10)
+);
+
+CREATE TABLE Passengers (
+    PassengerID     VARCHAR(10) PRIMARY KEY NOT NULL,
+    Name            VARCHAR(50)             NOT NULL,
+    PassportNumber  VARCHAR(50)             NOT NULL,
+    Nationality     VARCHAR(50)             NOT NULL,
+    DateOfBirth     DATE                    NOT NULL,
+    ContactNumber   VARCHAR(15)             NOT NULL
+);
+
+CREATE TABLE Routes (
+    RouteID            VARCHAR(10) PRIMARY KEY NOT NULL,
+    DepartureLocation  VARCHAR(50)             NOT NULL,
+    ArrivalLocation    VARCHAR(50)             NOT NULL,
+    Distance           NUMBER(4)               NOT NULL,
+    Duration           NUMBER(2)               NOT NULL
+);
+
+CREATE TABLE Parts (
+    PartID             VARCHAR(10) PRIMARY KEY NOT NULL,
+    Name               VARCHAR(50)             NOT NULL,
+    Description        VARCHAR(50),
+    Manufacturer       VARCHAR(50)             NOT NULL,
+    PartNumber         VARCHAR(20)             NOT NULL
+);
+
+CREATE TABLE Airplane (
+    AirplaneID         VARCHAR(10) PRIMARY KEY NOT NULL,
+    Model              VARCHAR(50)             NOT NULL,
+    Capacity           NUMBER(3)               NOT NULL,
+    Manufacturer       VARCHAR(100)            NOT NULL,
+    YearOfManufacture  NUMBER(4)               NOT NULL
+);
+
+CREATE TABLE Items (
+    ItemID             VARCHAR(10) PRIMARY KEY NOT NULL,
+    Name               VARCHAR(30)             NOT NULL,
+    Description        VARCHAR(50),
+    Price              NUMBER(5, 2)            NOT NULL,
+    StockQuantity      NUMBER(5)               NOT NULL
+);
+
+CREATE TABLE Staffs (
+    StaffID        VARCHAR(10) PRIMARY KEY NOT NULL,
+    FirstName      VARCHAR(20)             NOT NULL,
+    LastName       VARCHAR(30)             NOT NULL,
+    Position       VARCHAR(20)             NOT NULL,
+    Email          VARCHAR(30),
+    Phone          VARCHAR(15),
+    HireDate       DATE                    NOT NULL,
+    Salary         NUMBER(10, 2)           NOT NULL
+);
+
+CREATE TABLE InsurancePolicy (
+    PolicyID         VARCHAR(10) PRIMARY KEY NOT NULL,
+    CoverageAmount   NUMBER(10, 2)           NOT NULL,
+    PremiumAmount    NUMBER(10, 2)           NOT NULL,
+    EffectiveDate    DATE                    NOT NULL,
+    ExpirationDate   DATE                    NOT NULL
+);
+
+
+--child table
+CREATE TABLE Promotions (
+    PromotionID         VARCHAR(10) PRIMARY KEY NOT NULL,
+    CampaignID          VARCHAR(10),
+    PromotionCode       VARCHAR(20),
+    StartDate           DATE,
+    EndDate             DATE,
+    DiscountPercentage  NUMBER(3),
+    FOREIGN KEY (CampaignID) REFERENCES Campaign(CampaignID)
+);
+
+
+CREATE TABLE Claim (
+    ClaimID      VARCHAR(10) PRIMARY KEY NOT NULL,
+    PolicyID     VARCHAR(10),
+    ClaimDate    DATE                    NOT NULL,
+    ClaimAmount  NUMBER(10, 2)           NOT NULL,
+    Status       VARCHAR(10)             NOT NULL, --(Pending/Approved/Rejected)
+    FOREIGN KEY (PolicyID) REFERENCES InsurancePolicy(PolicyID)
+);
+
+CREATE TABLE Purchase (
+    PurchaseDate   DATE          NOT NULL,
+    ItemID         VARCHAR(10)   NOT NULL,
+    PassengerID    VARCHAR(10)   NOT NULL,
+    TotalAmount    NUMBER(10, 2),
+    Quantity       NUMBER(4)     NOT NULL,
+    PRIMARY KEY (PurchaseDate, PassengerID, TotalAmount),
+    FOREIGN KEY (ItemID) REFERENCES Items(ItemID),
+    FOREIGN KEY (PassengerID) REFERENCES Passengers(PassengerID)
+);
+
+CREATE TABLE MaintenanceEvent (
+    EventID        VARCHAR(10) PRIMARY KEY NOT NULL,
+    AirplaneID     VARCHAR(10),
+    PartID         VARCHAR(10),
+    EventDate      DATE,
+    TotalAmount    NUMBER(10, 2),
+    FOREIGN KEY (AirplaneID) REFERENCES Airplane(AirplaneID),
+    FOREIGN KEY (PartID) REFERENCES Parts(PartID)
+);
+
+CREATE TABLE Flights (
+    FlightID            VARCHAR(10) PRIMARY KEY NOT NULL,
+    RouteID             VARCHAR(10),
+    AirplaneID          VARCHAR(10),
+    FlightNumber        VARCHAR(20),
+    DepartureDateTime   TIMESTAMP               NOT NULL,
+    ArrivalDateTime     TIMESTAMP               NOT NULL,
+    FOREIGN KEY (RouteID) REFERENCES Routes(RouteID),
+    FOREIGN KEY (AirplaneID) REFERENCES Airplane(AirplaneID)
+);
+
+CREATE TABLE Workloads (
+    WorkloadID          VARCHAR(10) PRIMARY KEY NOT NULL,
+    StaffID             VARCHAR(10)             NOT NULL,
+    FlightID            VARCHAR(10)             NOT NULL,
+    Role                VARCHAR(50)             NOT NULL,
+    AssignedDate        DATE                    NOT NULL,
+    WorkStartTime       TIMESTAMP               NOT NULL,
+    WorkEndTime	        TIMESTAMP               NOT NULL,
+    PilotHours	        NUMBER(5),
+    FOREIGN KEY (StaffID) REFERENCES Staffs(StaffID),
+    FOREIGN KEY (FlightID) REFERENCES Flights(FlightID)
+);
+
+CREATE TABLE Booking (
+    BookingID     VARCHAR(10) PRIMARY KEY NOT NULL,
+    PromotionID   VARCHAR(10),
+    MemberID      VARCHAR(10)             NOT NULL,
+    TotalPrice    NUMBER(10, 2)           NOT NULL,
+    BookingDate   DATE                    NOT NULL,
+    FOREIGN KEY (PromotionID) REFERENCES Promotions(PromotionID),
+    FOREIGN KEY (MemberID) REFERENCES Members(MemberID)
+);
+
+
+CREATE TABLE CheckLuggages (
+    LuggageID NUMBER(10) PRIMARY KEY NOT NULL,
+    CheckLuggageID VARCHAR(10) NOT NULL,
+    Weight NUMBER(5, 2),
+    Status VARCHAR(10), -- checked-in/lost
+    TagNumber VARCHAR(20)
+);
+
+
+CREATE TABLE BookingDetail (
+    WayID          NUMBER(1)     NOT NULL, --(1 for 1 way; 2 for return)
+    BookingID      VARCHAR(10)   NOT NULL,
+    PassengerID    VARCHAR(10)   NOT NULL,
+    FlightID       VARCHAR(10)   NOT NULL,
+    PolicyID       VARCHAR(10)   NOT NULL,
+    CheckLuggageID VARCHAR(10),
+    SeatNumber     NUMBER(4)     NOT NULL,
+    Class          VARCHAR(10)   NOT NULL,
+    Price          NUMBER(10, 2) NOT NULL,
+    PRIMARY KEY (WayID, BookingID, PassengerID),
+    FOREIGN KEY (BookingID)   REFERENCES Booking(BookingID),
+    FOREIGN KEY (PassengerID) REFERENCES Passengers(PassengerID),
+    FOREIGN KEY (FlightID)    REFERENCES Flights(FlightID),
+    FOREIGN KEY (PolicyID)    REFERENCES InsurancePolicy(PolicyID)
+);
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+--Trigger for check the luggage
+
+CREATE OR REPLACE TRIGGER trg_check_luggage_id
+BEFORE INSERT OR UPDATE ON CheckLuggages
+FOR EACH ROW
+DECLARE
+    v_count NUMBER;
+BEGIN
+    -- Check if the CheckLuggageID exists in the BookingDetail table
+    SELECT COUNT(*) INTO v_count
+    FROM BookingDetail
+    WHERE CheckLuggageID = :NEW.CheckLuggageID;
+
+    -- If the CheckLuggageID does not exist, raise an error
+    IF v_count = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'CheckLuggageID does not exist in BookingDetail table.');
+    END IF;
+END;
+/
+
+DROP SEQUENCE seq_BookingID;
+
+CREATE SEQUENCE seq_BookingID
+START WITH 1
+INCREMENT BY 1;
+
+
+DROP SEQUENCE Workloads_SEQ;
+
+CREATE SEQUENCE Workloads_SEQ
+START WITH 1
+INCREMENT BY 1;
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Parent
+
+INSERT INTO Members VALUES ('M001', 'John', 'Doe', 'john.doe@example.com', '555-1234', '123 Elm St', '1985-07-19', '2023-01-15', 'Gold');
+INSERT INTO Members VALUES ('M002', 'Jane', 'Smith', 'jane.smith@example.com', '555-5678', '456 Oak St', '1990-02-10', '2023-02-01', 'Silver');
+INSERT INTO Members VALUES ('M003', 'Michael', 'Brown', 'michael.brown@example.com', '555-8765', '789 Pine St', '1978-12-12', '2023-03-20', 'Gold');
+INSERT INTO Members VALUES ('M004', 'Emily', 'Davis', 'emily.davis@example.com', '555-4321', '321 Maple St', '1992-05-30', '2023-04-12', 'Bronze');
+INSERT INTO Members VALUES ('M005', 'David', 'Wilson', 'david.wilson@example.com', '555-9876', '654 Birch St', '1983-09-25', '2023-05-18', 'Silver');
+INSERT INTO Members VALUES ('M006', 'Sarah', 'Moore', 'sarah.moore@example.com', '555-3456', '987 Cedar St', '1987-11-07', '2023-06-10', 'Gold');
+INSERT INTO Members VALUES ('M007', 'Christopher', 'Taylor', 'christopher.taylor@example.com', '555-2345', '135 Spruce St', '1995-03-17', '2023-07-05', 'Bronze');
+INSERT INTO Members VALUES ('M008', 'Jessica', 'Anderson', 'jessica.anderson@example.com', '555-6789', '246 Redwood St', '1998-01-22', '2023-08-15', 'Silver');
+INSERT INTO Members VALUES ('M009', 'Daniel', 'Thomas', 'daniel.thomas@example.com', '555-7654', '357 Willow St', '1982-08-13', '2023-09-10', 'Gold');
+INSERT INTO Members VALUES ('M010', 'Ashley', 'Jackson', 'ashley.jackson@example.com', '555-5432', '468 Cherry St', '1993-06-28', '2023-10-01', 'Bronze');
+INSERT INTO Members VALUES ('M011', 'Sophia', 'Smith', 'sophia.smith@example.com', '555-5678', '123 Maple Ave', '1992-11-15', '2024-01-10', 'Gold');
+INSERT INTO Members VALUES ('M012', 'Liam', 'Johnson', 'liam.johnson@example.com', '555-6789', '456 Oak Rd', '1988-05-22', '2024-02-20', 'Silver');
+INSERT INTO Members VALUES ('M013', 'Emma', 'Williams', 'emma.williams@example.com', '555-7890', '789 Pine Ln', '1995-04-30', '2024-03-05', 'Bronze');
+INSERT INTO Members VALUES ('M014', 'Noah', 'Brown', 'noah.brown@example.com', '555-8901', '101 Birch St', '1990-09-13', '2024-04-18', 'Gold');
+INSERT INTO Members VALUES ('M015', 'Olivia', 'Davis', 'olivia.davis@example.com', '555-9012', '202 Elm St', '1993-12-05', '2024-05-12', 'Silver');
+INSERT INTO Members VALUES ('M016', 'Ethan', 'Miller', 'ethan.miller@example.com', '555-0123', '303 Cedar Ave', '1994-07-09', '2024-06-25', 'Bronze');
+INSERT INTO Members VALUES ('M017', 'Ava', 'Wilson', 'ava.wilson@example.com', '555-1234', '404 Walnut St', '1989-03-14', '2024-07-30', 'Gold');
+INSERT INTO Members VALUES ('M018', 'James', 'Moore', 'james.moore@example.com', '555-2345', '505 Spruce Dr', '1991-08-21', '2024-08-16', 'Silver');
+INSERT INTO Members VALUES ('M019', 'Isabella', 'Taylor', 'isabella.taylor@example.com', '555-3456', '606 Ash Blvd', '1992-01-17', '2024-09-22', 'Bronze');
+INSERT INTO Members VALUES ('M020', 'Benjamin', 'Anderson', 'benjamin.anderson@example.com', '555-4567', '707 Pine St', '1987-10-30', '2024-10-10', 'Gold');
+INSERT INTO Members VALUES ('M021', 'Mia', 'Thomas', 'mia.thomas@example.com', '555-5678', '808 Oak Ave', '1994-06-08', '2024-11-04', 'Silver');
+INSERT INTO Members VALUES ('M022', 'Alexander', 'Jackson', 'alexander.jackson@example.com', '555-6789', '909 Maple Ln', '1990-02-19', '2024-12-01', 'Bronze');
+INSERT INTO Members VALUES ('M023', 'Charlotte', 'White', 'charlotte.white@example.com', '555-7890', '123 Birch Ave', '1988-11-30', '2025-01-15', 'Gold');
+INSERT INTO Members VALUES ('M024', 'Henry', 'Harris', 'henry.harris@example.com', '555-8901', '234 Cedar Dr', '1993-07-27', '2025-02-10', 'Silver');
+INSERT INTO Members VALUES ('M025', 'Amelia', 'Martin', 'amelia.martin@example.com', '555-9012', '345 Walnut Blvd', '1991-12-04', '2025-03-08', 'Bronze');
+INSERT INTO Members VALUES ('M026', 'Sebastian', 'Thompson', 'sebastian.thompson@example.com', '555-0123', '456 Spruce St', '1992-04-15', '2025-04-21', 'Gold');
+INSERT INTO Members VALUES ('M027', 'Harper', 'Garcia', 'harper.garcia@example.com', '555-1234', '567 Ash Ln', '1995-10-07', '2025-05-25', 'Silver');
+INSERT INTO Members VALUES ('M028', 'Jack', 'Martinez', 'jack.martinez@example.com', '555-2345', '678 Pine Ave', '1994-05-03', '2025-06-30', 'Bronze');
+INSERT INTO Members VALUES ('M029', 'Evelyn', 'Roberts', 'evelyn.roberts@example.com', '555-3456', '789 Maple Blvd', '1993-08-16', '2025-07-15', 'Gold');
+INSERT INTO Members VALUES ('M030', 'Lucas', 'Clark', 'lucas.clark@example.com', '555-4567', '890 Oak St', '1989-01-25', '2025-08-12', 'Silver');
+INSERT INTO Members VALUES ('M031', 'Ella', 'Lewis', 'ella.lewis@example.com', '555-5678', '901 Birch Dr', '1990-12-22', '2025-09-19', 'Bronze');
+INSERT INTO Members VALUES ('M032', 'Oliver', 'Lee', 'oliver.lee@example.com', '555-6789', '102 Cedar Ave', '1988-03-09', '2025-10-30', 'Gold');
+INSERT INTO Members VALUES ('M033', 'Luna', 'Walker', 'luna.walker@example.com', '555-7890', '203 Walnut Rd', '1991-06-17', '2025-11-18', 'Silver');
+INSERT INTO Members VALUES ('M034', 'Mason', 'Hall', 'mason.hall@example.com', '555-8901', '304 Spruce Ln', '1992-09-23', '2025-12-05', 'Bronze');
+INSERT INTO Members VALUES ('M035', 'Zoe', 'Young', 'zoe.young@example.com', '555-9012', '405 Ash St', '1995-04-11', '2026-01-12', 'Gold');
+
+
+
+
+INSERT INTO Campaign VALUES ('C001', 'Summer Promo', '2023-06-01', '2023-08-31', 'Discount on all products', 'General');
+INSERT INTO Campaign VALUES ('C002', 'Holiday Sale', '2023-12-01', '2023-12-31', 'End of year clearance', 'General');
+INSERT INTO Campaign VALUES ('C003', 'Back to School', '2023-08-01', '2023-09-15', 'Discounts for students', 'Students');
+INSERT INTO Campaign VALUES ('C004', 'Spring Sale', '2023-03-01', '2023-04-30', 'New arrivals discount', 'General');
+INSERT INTO Campaign VALUES ('C005', 'Winter Warmers', '2023-01-01', '2023-02-28', 'Seasonal products promotion', 'General');
+INSERT INTO Campaign VALUES ('C006', 'Black Friday', '2023-11-24', '2023-11-24', 'One day mega sale', 'General');
+INSERT INTO Campaign VALUES ('C007', 'Cyber Monday', '2023-11-27', '2023-11-27', 'Online exclusive deals', 'Online');
+INSERT INTO Campaign VALUES ('C008', 'Valentines Day', '2023-02-01', '2023-02-14', 'Gifts and offers', 'Couples');
+INSERT INTO Campaign VALUES ('C009', 'Mothers Day', '2023-05-01', '2023-05-14', 'Special offers for moms', 'Mothers');
+INSERT INTO Campaign VALUES ('C010', 'Fathers Day', '2023-06-01', '2023-06-18', 'Special offers for dads', 'Fathers');
+INSERT INTO Campaign VALUES ('C011', 'Summer Sale', '2023-07-01', '2023-07-15', 'Big discounts on summer items', 'Seasonal');
+INSERT INTO Campaign VALUES ('C012', 'Back to School', '2023-08-01', '2023-08-20', 'Offers on school supplies and clothing', 'Education');
+INSERT INTO Campaign VALUES ('C013', 'Halloween Special', '2023-10-01', '2023-10-31', 'Spooky deals and discounts', 'Holiday');
+INSERT INTO Campaign VALUES ('C014', 'Black Friday', '2023-11-24', '2023-11-25', 'Massive discounts on electronics', 'Holiday');
+INSERT INTO Campaign VALUES ('C015', 'Cyber Monday', '2023-11-27', '2023-11-27', 'Online-only deals and promotions', 'Holiday');
+INSERT INTO Campaign VALUES ('C016', 'Christmas Extravaganza', '2023-12-01', '2023-12-24', 'Festive discounts and holiday specials', 'Holiday');
+INSERT INTO Campaign VALUES ('C017', 'New Year Sale', '2023-12-26', '2024-01-02', 'New year clearance and special offers', 'Seasonal');
+INSERT INTO Campaign VALUES ('C018', 'Fourth of July', '2024-07-01', '2024-07-04', 'Patriotic deals and discounts', 'Holiday');
+INSERT INTO Campaign VALUES ('C019', 'Labor Day Sale', '2024-08-30', '2024-09-02', 'End-of-summer clearance', 'Holiday');
+INSERT INTO Campaign VALUES ('C020', 'Fall Harvest', '2024-09-01', '2024-10-31', 'Autumn-themed promotions', 'Seasonal');
+INSERT INTO Campaign VALUES ('C021', 'Thanksgiving Sale', '2024-11-01', '2024-11-28', 'Thanksgiving specials and discounts', 'Holiday');
+INSERT INTO Campaign VALUES ('C022', 'Winter Wonderland', '2024-12-01', '2024-12-31', 'Winter promotions and deals', 'Seasonal');
+INSERT INTO Campaign VALUES ('C023', 'Fitness New Year', '2024-01-01', '2024-01-15', 'New year fitness and wellness offers', 'Seasonal');
+INSERT INTO Campaign VALUES ('C024', 'Anniversary Sale', '2024-03-01', '2024-03-10', 'Special discounts to celebrate our anniversary', 'Event');
+INSERT INTO Campaign VALUES ('C025', 'Summer Clearance', '2024-07-01', '2024-07-31', 'End-of-summer clearance event', 'Seasonal');
+
+
+
+INSERT INTO Passengers VALUES ('P001', 'Alice Johnson', 'A12345678', 'USA', '1987-03-22', '555-8765');
+INSERT INTO Passengers VALUES ('P002', 'Bob Miller', 'B87654321', 'Canada', '1990-12-05', '555-1234');
+INSERT INTO Passengers VALUES ('P003', 'Charlie Smith', 'C23456789', 'UK', '1985-07-19', '555-4321');
+INSERT INTO Passengers VALUES ('P004', 'Daisy Brown', 'D34567890', 'Australia', '1992-09-15', '555-2345');
+INSERT INTO Passengers VALUES ('P005', 'Edward Davis', 'E45678901', 'New Zealand', '1980-01-01', '555-3456');
+INSERT INTO Passengers VALUES ('P006', 'Fiona White', 'F56789012', 'South Africa', '1995-11-30', '555-9876');
+INSERT INTO Passengers VALUES ('P007', 'George Black', 'G67890123', 'Ireland', '1982-04-12', '555-5432');
+INSERT INTO Passengers VALUES ('P008', 'Hannah Green', 'H78901234', 'Germany', '1988-08-23', '555-6789');
+INSERT INTO Passengers VALUES ('P009', 'Ian Gray', 'I89012345', 'France', '1978-06-18', '555-7654');
+INSERT INTO Passengers VALUES ('P010', 'Julia King', 'J90123456', 'Italy', '1990-02-10', '555-8765');
+INSERT INTO Passengers VALUES ('P011', 'Liam Carter', 'J90234567', 'France', '1985-03-22', '555-9876');
+INSERT INTO Passengers VALUES ('P012', 'Emma Watson', 'J90345678', 'Germany', '1992-07-15', '555-6543');
+INSERT INTO Passengers VALUES ('P013', 'Noah Johnson', 'J90456789', 'Spain', '1988-11-30', '555-1234');
+INSERT INTO Passengers VALUES ('P014', 'Olivia Brown', 'J90567890', 'Canada', '1991-04-05', '555-4321');
+INSERT INTO Passengers VALUES ('P015', 'Ethan Miller', 'J90678901', 'USA', '1986-08-17', '555-5678');
+INSERT INTO Passengers VALUES ('P016', 'Ava Davis', 'J90789012', 'UK', '1994-12-20', '555-6789');
+INSERT INTO Passengers VALUES ('P017', 'Sophia Garcia', 'J90890123', 'Australia', '1989-09-14', '555-7890');
+INSERT INTO Passengers VALUES ('P018', 'Jackson Lee', 'J90901234', 'Japan', '1990-06-11', '555-8901');
+INSERT INTO Passengers VALUES ('P019', 'Mia Martinez', 'J91012345', 'Mexico', '1993-01-26', '555-9012');
+INSERT INTO Passengers VALUES ('P020', 'Lucas Thomas', 'J91123456', 'Brazil', '1987-10-08', '555-0123');
+INSERT INTO Passengers VALUES ('P021', 'Charlotte Robinson', 'J91234567', 'South Africa', '1985-05-19', '555-1234');
+INSERT INTO Passengers VALUES ('P022', 'Benjamin Clark', 'J91345678', 'India', '1992-07-23', '555-2345');
+INSERT INTO Passengers VALUES ('P023', 'Amelia Lewis', 'J91456789', 'Russia', '1989-03-29', '555-3456');
+INSERT INTO Passengers VALUES ('P024', 'Mason Walker', 'J91567890', 'China', '1994-11-14', '555-4567');
+INSERT INTO Passengers VALUES ('P025', 'Isabella Hall', 'J91678901', 'Sweden', '1991-12-07', '555-5678');
+INSERT INTO Passengers VALUES ('P026', 'Oliver Young', 'J91789012', 'Norway', '1993-06-18', '555-6789');
+INSERT INTO Passengers VALUES ('P027', 'Harper Allen', 'J91890123', 'Italy', '1988-02-10', '555-7890');
+INSERT INTO Passengers VALUES ('P028', 'Elijah Scott', 'J91901234', 'Netherlands', '1990-09-21', '555-8901');
+INSERT INTO Passengers VALUES ('P029', 'Evelyn King', 'J92012345', 'Argentina', '1987-04-03', '555-9012');
+INSERT INTO Passengers VALUES ('P030', 'James Wilson', 'J92123456', 'Chile', '1992-05-17', '555-0123');
+
+
+
+INSERT INTO Routes VALUES ('R001', 'New York', 'Los Angeles', 4500, 6);
+INSERT INTO Routes VALUES ('R002', 'London', 'Paris', 344, 1);
+INSERT INTO Routes VALUES ('R003', 'Tokyo', 'Seoul', 1160, 2);
+INSERT INTO Routes VALUES ('R004', 'Sydney', 'Melbourne', 877, 1);
+INSERT INTO Routes VALUES ('R005', 'Toronto', 'Vancouver', 3350, 5);
+INSERT INTO Routes VALUES ('R006', 'Berlin', 'Munich', 584, 1);
+INSERT INTO Routes VALUES ('R007', 'Dubai', 'Mumbai', 1996, 3);
+INSERT INTO Routes VALUES ('R008', 'San Francisco', 'Chicago', 2970, 4);
+INSERT INTO Routes VALUES ('R009', 'Beijing', 'Shanghai', 1207, 2);
+INSERT INTO Routes VALUES ('R010', 'Moscow', 'St. Petersburg', 634, 1);
+INSERT INTO Routes VALUES ('R011', 'New York', 'Los Angeles', 3975, 6);
+INSERT INTO Routes VALUES ('R012', 'London', 'Paris', 344, 1);
+INSERT INTO Routes VALUES ('R013', 'Tokyo', 'Osaka', 515, 1);
+INSERT INTO Routes VALUES ('R014', 'Sydney', 'Melbourne', 705, 1);
+INSERT INTO Routes VALUES ('R015', 'Berlin', 'Munich', 584, 1);
+INSERT INTO Routes VALUES ('R016', 'Rome', 'Venice', 395, 1);
+INSERT INTO Routes VALUES ('R017', 'Dubai', 'Abu Dhabi', 140, 1);
+INSERT INTO Routes VALUES ('R018', 'Toronto', 'Vancouver', 3350, 5);
+INSERT INTO Routes VALUES ('R019', 'Hong Kong', 'Shanghai', 1227, 2);
+INSERT INTO Routes VALUES ('R020', 'Singapore', 'Kuala Lumpur', 360, 1);
+INSERT INTO Routes VALUES ('R021', 'Madrid', 'Barcelona', 621, 1);
+INSERT INTO Routes VALUES ('R022', 'Istanbul', 'Athens', 560, 1);
+INSERT INTO Routes VALUES ('R023', 'Johannesburg', 'Cape Town', 1267, 2);
+INSERT INTO Routes VALUES ('R024', 'Buenos Aires', 'Sao Paulo', 1680, 3);
+INSERT INTO Routes VALUES ('R025', 'Moscow', 'Kazan', 800, 1);
+INSERT INTO Routes VALUES ('R026', 'Seoul', 'Busan', 325, 1);
+INSERT INTO Routes VALUES ('R027', 'San Francisco', 'Seattle', 1300, 2);
+INSERT INTO Routes VALUES ('R028', 'Rome', 'Florence', 230, 1);
+INSERT INTO Routes VALUES ('R029', 'Lima', 'Bogota', 1400, 3);
+INSERT INTO Routes VALUES ('R030', 'Mexico City', 'Cancun', 1630, 3);
+
+
+
+
+INSERT INTO Parts VALUES ('PA001', 'Engine', 'Jet Engine', 'GE Aviation', 'ENG12345');
+INSERT INTO Parts VALUES ('PA002', 'Wing', 'Aircraft Wing', 'Boeing', 'WNG67890');
+INSERT INTO Parts VALUES ('PA003', 'Landing Gear', 'Aircraft Landing Gear', 'Safran', 'LG12345');
+INSERT INTO Parts VALUES ('PA004', 'Avionics', 'Flight Control System', 'Honeywell', 'AV67890');
+INSERT INTO Parts VALUES ('PA005', 'Tail', 'Aircraft Tail', 'Airbus', 'TAIL54321');
+INSERT INTO Parts VALUES ('PA006', 'Cabin', 'Aircraft Cabin', 'Boeing', 'CAB12345');
+INSERT INTO Parts VALUES ('PA007', 'Fuselage', 'Aircraft Fuselage', 'Spirit AeroSystems', 'FUS67890');
+INSERT INTO Parts VALUES ('PA008', 'Propeller', 'Aircraft Propeller', 'Hamilton Sundstrand', 'PROP12345');
+INSERT INTO Parts VALUES ('PA009', 'Rudder', 'Aircraft Rudder', 'Airbus', 'RUD67890');
+INSERT INTO Parts VALUES ('PA010', 'Brakes', 'Aircraft Brakes', 'BendixKing', 'BRK54321');
+INSERT INTO Parts VALUES ('PA011', 'Engine', 'Jet Engine', 'Rolls-Royce', 'ENG67890');
+INSERT INTO Parts VALUES ('PA012', 'Propeller', 'Aircraft Propeller', 'Hamilton Standard', 'PROP12345');
+INSERT INTO Parts VALUES ('PA013', 'Landing Gear', 'Main Landing Gear', 'Goodrich', 'LG98765');
+INSERT INTO Parts VALUES ('PA014', 'Avionics', 'Flight Control System', 'Honeywell', 'AVC54321');
+INSERT INTO Parts VALUES ('PA015', 'Fuel Pump', 'Hydraulic Fuel Pump', 'Parker', 'FP67890');
+INSERT INTO Parts VALUES ('PA016', 'Cabin Door', 'Emergency Cabin Door', 'Boeing', 'CD34567');
+INSERT INTO Parts VALUES ('PA017', 'Wing', 'Left Wing', 'Airbus', 'WNG89012');
+INSERT INTO Parts VALUES ('PA018', 'Tail Section', 'Vertical Stabilizer', 'Lockheed Martin', 'TS56789');
+INSERT INTO Parts VALUES ('PA019', 'Radio', 'Aircraft Communication Radio', 'Garmin', 'RAD67890');
+INSERT INTO Parts VALUES ('PA020', 'Radar', 'Weather Radar', 'Northrop Grumman', 'RAD12345');
+INSERT INTO Parts VALUES ('PA021', 'Cockpit Window', 'Front Cockpit Window', 'Safran', 'CW78901');
+INSERT INTO Parts VALUES ('PA022', 'Seat', 'Passenger Seat', 'Recaro', 'SEAT45678');
+INSERT INTO Parts VALUES ('PA023', 'Oxygen Mask', 'Emergency Oxygen Mask', 'AeroMed', 'OM12345');
+INSERT INTO Parts VALUES ('PA024', 'Hydraulic System', 'Main Hydraulic System', 'Moog', 'HS98765');
+INSERT INTO Parts VALUES ('PA025', 'Electrical System', 'Aircraft Electrical System', 'Sargent', 'ELC54321');
+INSERT INTO Parts VALUES ('PA026', 'Cargo Door', 'Rear Cargo Door', 'Meggitt', 'CD67890');
+INSERT INTO Parts VALUES ('PA027', 'Anti-Ice System', 'Wing Anti-Ice System', 'Eaton', 'AI23456');
+INSERT INTO Parts VALUES ('PA028', 'Battery', 'Aircraft Battery', 'Concorde', 'BAT78901');
+INSERT INTO Parts VALUES ('PA029', 'Heater', 'Cabin Heater', 'Webasto', 'HTR45678');
+INSERT INTO Parts VALUES ('PA030', 'Air Conditioning', 'Cabin Air Conditioning Unit', 'Denso', 'ACU34567');
+
+
+
+INSERT INTO Airplane VALUES ('AP001', 'Boeing 737', 200, 'Boeing', 2015);
+INSERT INTO Airplane VALUES ('AP002', 'Airbus A320', 180, 'Airbus', 2017);
+INSERT INTO Airplane VALUES ('AP003', 'Boeing 777', 396, 'Boeing', 2018);
+INSERT INTO Airplane VALUES ('AP004', 'Airbus A380', 853, 'Airbus', 2016);
+INSERT INTO Airplane VALUES ('AP005', 'Boeing 787', 242, 'Boeing', 2019);
+INSERT INTO Airplane VALUES ('AP006', 'Embraer E190', 114, 'Embraer', 2014);
+INSERT INTO Airplane VALUES ('AP007', 'Bombardier CRJ900', 90, 'Bombardier', 2013);
+INSERT INTO Airplane VALUES ('AP008', 'Cessna 172', 4, 'Cessna', 2012);
+INSERT INTO Airplane VALUES ('AP009', 'Gulfstream G650', 18, 'Gulfstream Aerospace', 2020);
+INSERT INTO Airplane VALUES ('AP010', 'Dassault Falcon 8X', 14, 'Dassault Aviation', 2021);
+INSERT INTO Airplane VALUES ('AP011', 'Gulfstream G650', 16, 'Gulfstream Aerospace', 2020);
+INSERT INTO Airplane VALUES ('AP012', 'Boeing 737 MAX', 189, 'Boeing', 2018);
+INSERT INTO Airplane VALUES ('AP013', 'Airbus A350-900', 315, 'Airbus', 2019);
+INSERT INTO Airplane VALUES ('AP014', 'Bombardier Global 7500', 19, 'Bombardier Aerospace', 2022);
+INSERT INTO Airplane VALUES ('AP015', 'Embraer Legacy 650', 13, 'Embraer', 2017);
+INSERT INTO Airplane VALUES ('AP016', 'Cessna Citation Latitude', 9, 'Cessna Aircraft', 2021);
+INSERT INTO Airplane VALUES ('AP017', 'Piper Navajo Chieftain', 6, 'Piper Aircraft', 2015);
+INSERT INTO Airplane VALUES ('AP018', 'Hawker 900XP', 8, 'Hawker Beechcraft', 2018);
+INSERT INTO Airplane VALUES ('AP019', 'Dassault Falcon 7X', 12, 'Dassault Aviation', 2016);
+INSERT INTO Airplane VALUES ('AP020', 'Airbus A320neo', 180, 'Airbus', 2021);
+INSERT INTO Airplane VALUES ('AP021', 'Boeing 787 Dreamliner', 242, 'Boeing', 2020);
+INSERT INTO Airplane VALUES ('AP022', 'Gulfstream G500', 12, 'Gulfstream Aerospace', 2019);
+INSERT INTO Airplane VALUES ('AP023', 'Bombardier Challenger 350', 10, 'Bombardier Aerospace', 2022);
+INSERT INTO Airplane VALUES ('AP024', 'Embraer Phenom 300', 8, 'Embraer', 2021);
+INSERT INTO Airplane VALUES ('AP025', 'Cessna Citation XLS+', 12, 'Cessna Aircraft', 2020);
+INSERT INTO Airplane VALUES ('AP026', 'Piper Archer TX', 4, 'Piper Aircraft', 2023);
+INSERT INTO Airplane VALUES ('AP027', 'Hawker 4000', 10, 'Hawker Beechcraft', 2017);
+INSERT INTO Airplane VALUES ('AP028', 'Dassault Falcon 2000LXS', 10, 'Dassault Aviation', 2018);
+INSERT INTO Airplane VALUES ('AP029', 'Airbus A321XLR', 206, 'Airbus', 2022);
+INSERT INTO Airplane VALUES ('AP030', 'Boeing 787-10', 318, 'Boeing', 2021);
+
+
+
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I001', 'Travel Pillow', 'Comfortable neck support pillow', 19.99, 150);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I002', 'Headphones', 'Noise-cancelling headphones', 99.99, 75);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I003', 'Snacks Pack', 'Assorted travel snacks', 8.50, 200);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I004', 'Blanket', 'Warm and cozy travel blanket', 25.99, 50);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I005', 'Portable Charger', '5000mAh power bank', 29.99, 100);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I006', 'Eye Mask', 'Silk sleep eye mask', 12.99, 120);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I007', 'Travel Adapter', 'Universal travel adapter', 15.99, 80);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I008', 'Water Bottle', 'Reusable stainless steel bottle', 18.50, 90);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I009', 'E-Book Reader', '8GB e-book reader', 129.99, 30);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) 
+VALUES ('I010', 'Travel Bag', 'Compact carry-on travel bag', 45.99, 60);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I011', 'Travel Socks', 'Comfortable compression socks', 9.75, 127);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I012', 'Toiletry Bag', 'Hanging toiletry bag', 23.49, 45);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I013', 'Bluetooth Keyboard', 'Portable Bluetooth keyboard', 45.99, 67);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I014', 'Portable Hammock', 'Lightweight portable hammock', 29.99, 34);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I015', 'Travel Guide', 'Comprehensive travel guide book', 14.99, 89);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I016', 'Binoculars', 'Compact travel binoculars', 75.95, 25);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I017', 'Camera Lens', 'Wide-angle camera lens for smartphone', 55.49, 33);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I018', 'Camping Stove', 'Compact camping stove', 35.99, 12);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I019', 'Fitness Tracker', 'Waterproof fitness tracker watch', 99.99, 50);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I020', 'Digital Camera', 'Compact digital camera', 120.49, 15);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I021', 'Wireless Earbuds', 'Noise-canceling wireless earbuds', 89.99, 40);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I022', 'Luggage Tag', 'Durable leather luggage tag', 5.99, 150);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I023', 'Hand Sanitizer', 'Pocket-sized hand sanitizer', 3.99, 160);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I024', 'Travel Journal', 'Leather-bound travel journal', 15.99, 30);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I025', 'Portable Speaker', 'Bluetooth portable speaker', 59.95, 75);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I026', 'Mosquito Repellent', 'Portable mosquito repellent', 12.49, 100);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I027', 'Neck Pillow', 'Memory foam neck pillow', 19.99, 80);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I028', 'Flashlight', 'LED rechargeable flashlight', 14.99, 90);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I029', 'Travel Cup', 'Foldable silicone travel cup', 8.99, 110);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I030', 'Portable Fan', 'USB rechargeable mini fan', 10.49, 75);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I031', 'Travel Towel', 'Microfiber travel towel', 19.99, 45);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I032', 'Portable Hotspot', 'Portable Wi-Fi hotspot device', 139.99, 20);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I033', 'Universal Charger', 'Universal device charger', 29.99, 105);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I034', 'Sleeping Bag', 'Lightweight sleeping bag', 49.99, 65);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I035', 'Passport Cover', 'Leather passport cover', 7.99, 95);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I036', 'Laptop Sleeve', 'Protective laptop sleeve case', 39.99, 50);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I037', 'Portable Charger', '5000mAh power bank', 34.99, 60);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I038', 'Sunglasses', 'UV-protection sunglasses', 19.99, 80);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I039', 'Travel Wallet', 'Waterproof travel wallet', 25.99, 70);
+INSERT INTO Items (ItemID, Name, Description, Price, StockQuantity) VALUES ('I040', 'First Aid Kit', 'Compact first aid kit', 9.99, 150);
+
+
+
+
+INSERT INTO Staffs VALUES ('S001', 'Emma', 'Taylor', 'Pilot', 'emma.taylor@example.com', '555-1111', '2015-06-01', 75000.00);
+INSERT INTO Staffs VALUES ('S002', 'Liam', 'Johnson', 'Co-Pilot', 'liam.johnson@example.com', '555-2222', '2016-07-01', 60000.00);
+INSERT INTO Staffs VALUES ('S003', 'Olivia', 'Williams', 'Flight Attendant', 'olivia.williams@example.com', '555-3333', '2017-08-01', 45000.00);
+INSERT INTO Staffs VALUES ('S004', 'Noah', 'Brown', 'Mechanic', 'noah.brown@example.com', '555-4444', '2018-09-01', 55000.00);
+INSERT INTO Staffs VALUES ('S005', 'Ava', 'Jones', 'Ground Staff', 'ava.jones@example.com', '555-5555', '2019-10-01', 35000.00);
+INSERT INTO Staffs VALUES ('S006', 'Sophia', 'Garcia', 'Security', 'sophia.garcia@example.com', '555-6666', '2020-11-01', 40000.00);
+INSERT INTO Staffs VALUES ('S007', 'James', 'Martinez', 'Engineer', 'james.martinez@example.com', '555-7777', '2021-12-01', 65000.00);
+INSERT INTO Staffs VALUES ('S008', 'Amelia', 'Rodriguez', 'Cleaner', 'amelia.rodriguez@example.com', '555-8888', '2022-01-01', 30000.00);
+INSERT INTO Staffs VALUES ('S009', 'Lucas', 'Hernandez', 'Baggage Handler', 'lucas.hernandez@example.com', '555-9999', '2023-02-01', 32000.00);
+INSERT INTO Staffs VALUES ('S010', 'Mia', 'Lopez', 'Catering', 'mia.lopez@example.com', '555-1010', '2023-03-01', 34000.00);
+INSERT INTO Staffs VALUES ('S011', 'James', 'Smith', 'Maintenance', 'james.smith@example.com', '555-2020', '2022-06-15', 42000.00);
+INSERT INTO Staffs VALUES ('S012', 'Olivia', 'Brown', 'Customer Service', 'olivia.brown@example.com', '555-3030', '2021-11-01', 35000.00);
+INSERT INTO Staffs VALUES ('S013', 'Liam', 'Johnson', 'Security', 'liam.johnson@example.com', '555-4040', '2023-01-10', 37000.00);
+INSERT INTO Staffs VALUES ('S014', 'Emma', 'Williams', 'Flight Attendant', 'emma.williams@example.com', '555-5050', '2022-07-25', 38000.00);
+INSERT INTO Staffs VALUES ('S015', 'Noah', 'Davis', 'Pilots', 'noah.davis@example.com', '555-6060', '2021-09-30', 85000.00);
+INSERT INTO Staffs VALUES ('S016', 'Ava', 'Miller', 'Ground Operations', 'ava.miller@example.com', '555-7070', '2023-02-14', 36000.00);
+INSERT INTO Staffs VALUES ('S017', 'Ethan', 'Wilson', 'Catering', 'ethan.wilson@example.com', '555-8080', '2023-05-20', 34000.00);
+INSERT INTO Staffs VALUES ('S018', 'Sophia', 'Moore', 'Customer Service', 'sophia.moore@example.com', '555-9090', '2022-10-10', 35500.00);
+INSERT INTO Staffs VALUES ('S019', 'Jackson', 'Taylor', 'Maintenance', 'jackson.taylor@example.com', '555-0101', '2023-04-18', 43000.00);
+INSERT INTO Staffs VALUES ('S020', 'Mia', 'Anderson', 'Security', 'mia.anderson@example.com', '555-1212', '2022-12-01', 37000.00);
+INSERT INTO Staffs VALUES ('S021', 'Lucas', 'Thomas', 'Flight Attendant', 'lucas.thomas@example.com', '555-2323', '2021-08-22', 38500.00);
+INSERT INTO Staffs VALUES ('S022', 'Isabella', 'Jackson', 'Ground Operations', 'isabella.jackson@example.com', '555-3434', '2023-07-15', 36500.00);
+INSERT INTO Staffs VALUES ('S023', 'Mason', 'White', 'Pilots', 'mason.white@example.com', '555-4545', '2022-09-05', 87000.00);
+INSERT INTO Staffs VALUES ('S024', 'Charlotte', 'Harris', 'Catering', 'charlotte.harris@example.com', '555-5656', '2023-03-25', 34000.00);
+INSERT INTO Staffs VALUES ('S025', 'James', 'Martin', 'Customer Service', 'james.martin@example.com', '555-6767', '2022-11-30', 35500.00);
+INSERT INTO Staffs VALUES ('S026', 'Amelia', 'Garcia', 'Maintenance', 'amelia.garcia@example.com', '555-7878', '2023-06-05', 42500.00);
+INSERT INTO Staffs VALUES ('S027', 'Benjamin', 'Clark', 'Security', 'benjamin.clark@example.com', '555-8989', '2022-08-15', 37500.00);
+INSERT INTO Staffs VALUES ('S028', 'Harper', 'Lewis', 'Flight Attendant', 'harper.lewis@example.com', '555-9091', '2023-01-20', 39000.00);
+INSERT INTO Staffs VALUES ('S029', 'Evelyn', 'Lee', 'Ground Operations', 'evelyn.lee@example.com', '555-0102', '2023-04-10', 36800.00);
+INSERT INTO Staffs VALUES ('S030', 'Alexander', 'Walker', 'Pilots', 'alexander.walker@example.com', '555-1213', '2021-10-20', 86000.00);
+
+
+
+INSERT INTO InsurancePolicy VALUES ('IP001', 500000.00, 500.00, '2023-01-01', '2024-01-01');
+INSERT INTO InsurancePolicy VALUES ('IP002', 1000000.00, 1000.00, '2023-02-01', '2024-02-01');
+INSERT INTO InsurancePolicy VALUES ('IP003', 750000.00, 750.00, '2023-03-01', '2024-03-01');
+INSERT INTO InsurancePolicy VALUES ('IP004', 250000.00, 250.00, '2023-04-01', '2024-04-01');
+INSERT INTO InsurancePolicy VALUES ('IP005', 300000.00, 300.00, '2023-05-01', '2024-05-01');
+INSERT INTO InsurancePolicy VALUES ('IP006', 150000.00, 150.00, '2023-06-01', '2024-06-01');
+INSERT INTO InsurancePolicy VALUES ('IP007', 800000.00, 800.00, '2023-07-01', '2024-07-01');
+INSERT INTO InsurancePolicy VALUES ('IP008', 900000.00, 900.00, '2023-08-01', '2024-08-01');
+INSERT INTO InsurancePolicy VALUES ('IP009', 200000.00, 200.00, '2023-09-01', '2024-09-01');
+INSERT INTO InsurancePolicy VALUES ('IP010', 400000.00, 400.00, '2023-10-01', '2024-10-01');
+INSERT INTO InsurancePolicy VALUES ('IP011', 250000.00, 300.00, '2023-11-01', '2024-11-01');
+INSERT INTO InsurancePolicy VALUES ('IP012', 500000.00, 600.00, '2023-09-15', '2024-09-15');
+INSERT INTO InsurancePolicy VALUES ('IP013', 350000.00, 450.00, '2023-12-01', '2024-12-01');
+INSERT INTO InsurancePolicy VALUES ('IP014', 600000.00, 750.00, '2023-08-20', '2024-08-20');
+INSERT INTO InsurancePolicy VALUES ('IP015', 150000.00, 200.00, '2023-10-10', '2024-10-10');
+INSERT INTO InsurancePolicy VALUES ('IP016', 400000.00, 420.00, '2023-11-15', '2024-11-15');
+INSERT INTO InsurancePolicy VALUES ('IP017', 275000.00, 320.00, '2023-09-05', '2024-09-05');
+INSERT INTO InsurancePolicy VALUES ('IP018', 475000.00, 580.00, '2023-10-25', '2024-10-25');
+INSERT INTO InsurancePolicy VALUES ('IP019', 300000.00, 350.00, '2023-11-30', '2024-11-30');
+INSERT INTO InsurancePolicy VALUES ('IP020', 550000.00, 650.00, '2023-12-10', '2024-12-10');
+INSERT INTO InsurancePolicy VALUES ('IP021', 425000.00, 470.00, '2023-09-20', '2024-09-20');
+INSERT INTO InsurancePolicy VALUES ('IP022', 340000.00, 390.00, '2023-10-05', '2024-10-05');
+INSERT INTO InsurancePolicy VALUES ('IP023', 600000.00, 700.00, '2023-08-01', '2024-08-01');
+INSERT INTO InsurancePolicy VALUES ('IP024', 500000.00, 620.00, '2023-11-01', '2024-11-01');
+INSERT INTO InsurancePolicy VALUES ('IP025', 275000.00, 310.00, '2023-09-15', '2024-09-15');
+INSERT INTO InsurancePolicy VALUES ('IP026', 350000.00, 400.00, '2023-12-01', '2024-12-01');
+INSERT INTO InsurancePolicy VALUES ('IP027', 475000.00, 560.00, '2023-10-10', '2024-10-10');
+INSERT INTO InsurancePolicy VALUES ('IP028', 600000.00, 750.00, '2023-11-20', '2024-11-20');
+INSERT INTO InsurancePolicy VALUES ('IP029', 150000.00, 180.00, '2023-10-25', '2024-10-25');
+INSERT INTO InsurancePolicy VALUES ('IP030', 400000.00, 430.00, '2023-12-05', '2024-12-05');
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Child
+
+INSERT INTO Promotions VALUES ('PR001', 'C001', 'SUMMER2023', '2023-06-01', '2023-08-31', 15);
+INSERT INTO Promotions VALUES ('PR002', 'C002', 'HOLIDAY2023', '2023-12-01', '2023-12-31', 20);
+INSERT INTO Promotions VALUES ('PR003', 'C003', 'BACK2SCHOOL', '2023-08-01', '2023-09-15', 10);
+INSERT INTO Promotions VALUES ('PR004', 'C004', 'SPRING2023', '2023-03-01', '2023-04-30', 12);
+INSERT INTO Promotions VALUES ('PR005', 'C005', 'WINTERWARM', '2023-01-01', '2023-02-28', 18);
+INSERT INTO Promotions VALUES ('PR006', 'C006', 'BLACKFRIDAY', '2023-11-24', '2023-11-24', 30);
+INSERT INTO Promotions VALUES ('PR007', 'C007', 'CYBERMONDAY', '2023-11-27', '2023-11-27', 25);
+INSERT INTO Promotions VALUES ('PR008', 'C008', 'LOVE2023', '2023-02-01', '2023-02-14', 15);
+INSERT INTO Promotions VALUES ('PR009', 'C009', 'MOMSDAY23', '2023-05-01', '2023-05-14', 10);
+INSERT INTO Promotions VALUES ('PR010', 'C010', 'DADSDAY23', '2023-06-01', '2023-06-18', 10);
+INSERT INTO Promotions VALUES ('PR011', 'C003', 'EASTER2023', '2023-04-01', '2023-04-16', 12);
+INSERT INTO Promotions VALUES ('PR012', 'C005', 'SUMMERCLEARANCE', '2023-08-15', '2023-08-31', 20);
+INSERT INTO Promotions VALUES ('PR013', 'C002', 'FALL2023', '2023-09-01', '2023-11-30', 18);
+INSERT INTO Promotions VALUES ('PR014', 'C007', 'PREBLACKFRIDAY', '2023-11-20', '2023-11-23', 22);
+INSERT INTO Promotions VALUES ('PR015', 'C004', 'VALENTINE2023', '2023-02-01', '2023-02-14', 14);
+INSERT INTO Promotions VALUES ('PR016', 'C006', 'WINTER2023', '2023-12-01', '2023-12-31', 25);
+INSERT INTO Promotions VALUES ('PR017', 'C008', 'FATHERSDAY23', '2023-06-15', '2023-06-18', 12);
+INSERT INTO Promotions VALUES ('PR018', 'C009', 'MOTHERSDAY2023', '2023-05-01', '2023-05-14', 15);
+INSERT INTO Promotions VALUES ('PR019', 'C001', 'SPRINGSALE', '2023-03-01', '2023-03-31', 10);
+INSERT INTO Promotions VALUES ('PR020', 'C010', 'SUMMERBONUS', '2023-07-01', '2023-07-31', 20);
+INSERT INTO Promotions VALUES ('PR021', 'C002', 'BACKTOSCHOOL2023', '2023-08-01', '2023-08-31', 10);
+INSERT INTO Promotions VALUES ('PR022', 'C003', 'PREHOLIDAY2023', '2023-11-01', '2023-11-30', 15);
+INSERT INTO Promotions VALUES ('PR023', 'C005', 'SPRINGCLEARANCE', '2023-04-01', '2023-04-30', 14);
+INSERT INTO Promotions VALUES ('PR024', 'C006', 'BLACKFRIDAY2023', '2023-11-24', '2023-11-24', 30);
+INSERT INTO Promotions VALUES ('PR025', 'C007', 'CYBERMONDAY2023', '2023-11-27', '2023-11-27', 25);
+INSERT INTO Promotions VALUES ('PR026', 'C008', 'NEWYEAR2023', '2023-01-01', '2023-01-31', 20);
+INSERT INTO Promotions VALUES ('PR027', 'C009', 'SUMMERSPECIAL', '2023-06-01', '2023-08-31', 15);
+INSERT INTO Promotions VALUES ('PR028', 'C001', 'AUTUMN2023', '2023-09-01', '2023-11-30', 12);
+INSERT INTO Promotions VALUES ('PR029', 'C004', 'HOLIDAYSALE', '2023-12-01', '2023-12-24', 20);
+INSERT INTO Promotions VALUES ('PR030', 'C010', 'VALENTINESPECIAL', '2023-02-01', '2023-02-14', 18);
+INSERT INTO Promotions VALUES ('PR031', 'C003', 'SPRING2023', '2023-03-01', '2023-03-31', 12);
+INSERT INTO Promotions VALUES ('PR032', 'C005', 'MARCHMADNESS', '2023-03-01', '2023-03-31', 15);
+INSERT INTO Promotions VALUES ('PR033', 'C006', 'WINTERSALE', '2023-01-01', '2023-01-31', 20);
+INSERT INTO Promotions VALUES ('PR034', 'C007', 'PRECYBERMONDAY', '2023-11-25', '2023-11-26', 22);
+INSERT INTO Promotions VALUES ('PR035', 'C008', 'HOLIDAY2023', '2023-12-01', '2023-12-31', 25);
+INSERT INTO Promotions VALUES ('PR036', 'C009', 'FALLCLEARANCE', '2023-09-01', '2023-10-31', 18);
+INSERT INTO Promotions VALUES ('PR037', 'C001', 'SUMMERSPLASH', '2023-06-01', '2023-06-30', 15);
+INSERT INTO Promotions VALUES ('PR038', 'C004', 'FALL2023', '2023-09-01', '2023-11-30', 12);
+INSERT INTO Promotions VALUES ('PR039', 'C005', 'WINTERBONUS', '2023-01-01', '2023-01-31', 20);
+INSERT INTO Promotions VALUES ('PR040', 'C010', 'SUMMERSPECIAL', '2023-07-01', '2023-07-31', 18);
+INSERT INTO Promotions VALUES ('PR041', 'C002', 'BACKTOSCHOOLBONUS', '2023-08-01', '2023-08-31', 12);
+INSERT INTO Promotions VALUES ('PR042', 'C003', 'AUTUMN2023', '2023-09-01', '2023-11-30', 10);
+INSERT INTO Promotions VALUES ('PR043', 'C004', 'WINTER2023', '2023-01-01', '2023-01-31', 20);
+INSERT INTO Promotions VALUES ('PR044', 'C005', 'SUMMER2023', '2023-06-01', '2023-06-30', 15);
+INSERT INTO Promotions VALUES ('PR045', 'C006', 'FALLSALE', '2023-09-01', '2023-10-31', 18);
+INSERT INTO Promotions VALUES ('PR046', 'C007', 'HOLIDAYCLEARANCE', '2023-12-01', '2023-12-24', 22);
+INSERT INTO Promotions VALUES ('PR047', 'C008', 'VALENTINEBONUS', '2023-02-01', '2023-02-14', 16);
+INSERT INTO Promotions VALUES ('PR048', 'C009', 'SPRING2023', '2023-03-01', '2023-03-31', 12);
+INSERT INTO Promotions VALUES ('PR049', 'C010', 'SUMMER2023', '2023-06-01', '2023-08-31', 20);
+INSERT INTO Promotions VALUES ('PR050', 'C001', 'FALL2023', '2023-09-01', '2023-11-30', 15);
+INSERT INTO Promotions VALUES ('PR051', 'C002', 'WINTERCLEARANCE', '2023-01-01', '2023-01-31', 22);
+INSERT INTO Promotions VALUES ('PR052', 'C003', 'SPRINGCLEARANCE', '2023-03-01', '2023-03-31', 14);
+INSERT INTO Promotions VALUES ('PR053', 'C004', 'SUMMER2023', '2023-06-01', '2023-06-30', 18);
+INSERT INTO Promotions VALUES ('PR054', 'C005', 'AUTUMN2023', '2023-09-01', '2023-11-30', 12);
+INSERT INTO Promotions VALUES ('PR055', 'C006', 'BACKTOSCHOOL2023', '2023-08-01', '2023-08-31', 20);
+INSERT INTO Promotions VALUES ('PR056', 'C007', 'MOTHERSDAY23', '2023-05-01', '2023-05-14', 15);
+INSERT INTO Promotions VALUES ('PR057', 'C008', 'SUMMERBONUS', '2023-07-01', '2023-07-31', 20);
+INSERT INTO Promotions VALUES ('PR058', 'C009', 'HOLIDAYSALE', '2023-12-01', '2023-12-24', 18);
+INSERT INTO Promotions VALUES ('PR059', 'C010', 'WINTERSALE', '2023-01-01', '2023-01-31', 22);
+INSERT INTO Promotions VALUES ('PR060', 'C001', 'SUMMERCLEARANCE', '2023-08-01', '2023-08-31', 15);
+INSERT INTO Promotions VALUES ('PR061', 'C002', 'SPRING2023', '2023-03-01', '2023-05-31', 10);
+INSERT INTO Promotions VALUES ('PR062', 'C003', 'HOLIDAY2023', '2023-12-01', '2023-12-31', 20);
+INSERT INTO Promotions VALUES ('PR063', 'C004', 'MOTHERSDAY23', '2023-05-01', '2023-05-14', 12);
+INSERT INTO Promotions VALUES ('PR064', 'C005', 'BACKTOSCHOOL2023', '2023-08-01', '2023-08-31', 14);
+INSERT INTO Promotions VALUES ('PR065', 'C006', 'FALL2023', '2023-09-01', '2023-11-30', 18);
+INSERT INTO Promotions VALUES ('PR066', 'C007', 'WINTERBONUS', '2023-01-01', '2023-01-31', 20);
+INSERT INTO Promotions VALUES ('PR067', 'C008', 'VALENTINE2023', '2023-02-01', '2023-02-14', 14);
+INSERT INTO Promotions VALUES ('PR068', 'C009', 'SPRINGCLEARANCE', '2023-03-01', '2023-03-31', 16);
+INSERT INTO Promotions VALUES ('PR069', 'C010', 'SUMMER2023', '2023-07-01', '2023-07-31', 18);
+INSERT INTO Promotions VALUES ('PR070', 'C001', 'BACKTOSCHOOL2023', '2023-08-01', '2023-08-31', 12);
+INSERT INTO Promotions VALUES ('PR071', 'C002', 'SUMMERSPLASH', '2023-06-01', '2023-06-30', 15);
+INSERT INTO Promotions VALUES ('PR072', 'C003', 'WINTER2023', '2023-01-01', '2023-01-31', 20);
+INSERT INTO Promotions VALUES ('PR073', 'C004', 'FALL2023', '2023-09-01', '2023-11-30', 18);
+INSERT INTO Promotions VALUES ('PR074', 'C005', 'VALENTINESPECIAL', '2023-02-01', '2023-02-14', 16);
+INSERT INTO Promotions VALUES ('PR075', 'C006', 'SUMMERCLEARANCE', '2023-08-01', '2023-08-31', 20);
+INSERT INTO Promotions VALUES ('PR076', 'C007', 'BLACKFRIDAY2023', '2023-11-24', '2023-11-24', 30);
+INSERT INTO Promotions VALUES ('PR077', 'C008', 'PREHOLIDAY2023', '2023-11-01', '2023-11-30', 22);
+INSERT INTO Promotions VALUES ('PR078', 'C009', 'SUMMERBONUS', '2023-07-01', '2023-07-31', 18);
+INSERT INTO Promotions VALUES ('PR079', 'C010', 'FALL2023', '2023-09-01', '2023-11-30', 12);
+INSERT INTO Promotions VALUES ('PR080', 'C001', 'WINTERCLEARANCE', '2023-01-01', '2023-01-31', 22);
+INSERT INTO Promotions VALUES ('PR081', 'C002', 'SPRING2023', '2023-03-01', '2023-05-31', 10);
+INSERT INTO Promotions VALUES ('PR082', 'C003', 'SUMMERSPECIAL', '2023-06-01', '2023-08-31', 15);
+INSERT INTO Promotions VALUES ('PR083', 'C004', 'VALENTINEBONUS', '2023-02-01', '2023-02-14', 14);
+INSERT INTO Promotions VALUES ('PR084', 'C005', 'AUTUMN2023', '2023-09-01', '2023-11-30', 18);
+INSERT INTO Promotions VALUES ('PR085', 'C006', 'HOLIDAY2023', '2023-12-01', '2023-12-31', 25);
+INSERT INTO Promotions VALUES ('PR086', 'C007', 'WINTER2023', '2023-01-01', '2023-01-31', 22);
+INSERT INTO Promotions VALUES ('PR087', 'C008', 'SUMMERSPLASH', '2023-06-01', '2023-06-30', 16);
+INSERT INTO Promotions VALUES ('PR088', 'C009', 'BACKTOSCHOOL2023', '2023-08-01', '2023-08-31', 14);
+INSERT INTO Promotions VALUES ('PR089', 'C010', 'SPRING2023', '2023-03-01', '2023-05-31', 12);
+INSERT INTO Promotions VALUES ('PR090', 'C001', 'HOLIDAY2023', '2023-12-01', '2023-12-31', 20);
+INSERT INTO Promotions VALUES ('PR091', 'C002', 'FALL2023', '2023-09-01', '2023-11-30', 18);
+INSERT INTO Promotions VALUES ('PR092', 'C003', 'SUMMERSPECIAL', '2023-07-01', '2023-07-31', 15);
+INSERT INTO Promotions VALUES ('PR093', 'C004', 'WINTERBONUS', '2023-01-01', '2023-01-31', 22);
+INSERT INTO Promotions VALUES ('PR094', 'C005', 'SPRING2023', '2023-03-01', '2023-05-31', 14);
+INSERT INTO Promotions VALUES ('PR095', 'C006', 'VALENTINE2023', '2023-02-01', '2023-02-14', 16);
+INSERT INTO Promotions VALUES ('PR096', 'C007', 'SUMMERSPECIAL', '2023-06-01', '2023-06-30', 18);
+INSERT INTO Promotions VALUES ('PR097', 'C008', 'BACKTOSCHOOL2023', '2023-08-01', '2023-08-31', 12);
+INSERT INTO Promotions VALUES ('PR098', 'C009', 'FALLCLEARANCE', '2023-09-01', '2023-10-31', 15);
+INSERT INTO Promotions VALUES ('PR099', 'C010', 'HOLIDAY2023', '2023-12-01', '2023-12-31', 20);
+INSERT INTO Promotions VALUES ('PR100', 'C001', 'WINTER2023', '2023-01-01', '2023-01-31', 22);
+INSERT INTO Promotions VALUES ('PR101', 'C002', 'SPRING2023', '2023-03-01', '2023-03-31', 15);
+INSERT INTO Promotions VALUES ('PR102', 'C003', 'SUMMER2023', '2023-06-01', '2023-06-30', 25);
+INSERT INTO Promotions VALUES ('PR103', 'C004', 'FALL2023', '2023-09-01', '2023-09-30', 18);
+INSERT INTO Promotions VALUES ('PR104', 'C005', 'BLACKFRIDAY2023', '2023-11-24', '2023-11-26', 30);
+INSERT INTO Promotions VALUES ('PR105', 'C006', 'CYBERMONDAY2023', '2023-11-27', '2023-11-27', 20);
+INSERT INTO Promotions VALUES ('PR106', 'C007', 'CHRISTMAS2023', '2023-12-01', '2023-12-24', 12);
+INSERT INTO Promotions VALUES ('PR107', 'C008', 'NEWYEAR2024', '2023-12-26', '2024-01-02', 28);
+INSERT INTO Promotions VALUES ('PR108', 'C009', 'VALENTINES2024', '2024-02-01', '2024-02-14', 20);
+INSERT INTO Promotions VALUES ('PR109', 'C010', 'EASTER2024', '2024-03-28', '2024-04-01', 22);
+INSERT INTO Promotions VALUES ('PR110', 'C011', 'MOTHERSDAY2024', '2024-05-01', '2024-05-12', 17);
+INSERT INTO Promotions VALUES ('PR111', 'C012', 'FATHERSDAY2024', '2024-06-01', '2024-06-16', 15);
+INSERT INTO Promotions VALUES ('PR112', 'C013', 'LABORDAY2024', '2024-08-30', '2024-09-02', 23);
+INSERT INTO Promotions VALUES ('PR113', 'C014', 'THANKSGIVING2024', '2024-11-28', '2024-11-30', 18);
+INSERT INTO Promotions VALUES ('PR114', 'C015', 'BACKTOSCHOOL2024', '2024-08-01', '2024-08-31', 10);
+INSERT INTO Promotions VALUES ('PR115', 'C016', 'HALLOWEEN2024', '2024-10-01', '2024-10-31', 25);
+INSERT INTO Promotions VALUES ('PR116', 'C017', 'WINTERCLEARANCE2024', '2024-01-01', '2024-01-31', 30);
+INSERT INTO Promotions VALUES ('PR117', 'C018', 'SUMMERCLEARANCE2024', '2024-06-01', '2024-06-30', 27);
+INSERT INTO Promotions VALUES ('PR118', 'C019', 'SPRINGSALE2024', '2024-03-01', '2024-03-31', 22);
+INSERT INTO Promotions VALUES ('PR119', 'C020', 'FALLSALE2024', '2024-09-01', '2024-09-30', 20);
+INSERT INTO Promotions VALUES ('PR120', 'C021', 'HOLIDAY2024', '2024-12-01', '2024-12-31', 15);
+
+
+
+
+
+INSERT INTO Claim VALUES ('CL001', 'IP001', '2023-01-15', 20000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL002', 'IP002', '2023-02-20', 15000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL003', 'IP003', '2023-03-25', 5000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL004', 'IP004', '2023-04-10', 7500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL005', 'IP005', '2023-05-05', 9000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL006', 'IP006', '2023-06-18', 12000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL007', 'IP007', '2023-07-22', 18000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL008', 'IP008', '2023-08-12', 11000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL009', 'IP009', '2023-09-09', 13000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL010', 'IP010', '2023-10-01', 25000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL011', 'IP002', '2023-11-15', 16000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL012', 'IP003', '2023-12-20', 2000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL013', 'IP004', '2024-01-10', 8000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL014', 'IP005', '2024-02-25', 13000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL015', 'IP006', '2024-03-15', 6000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL016', 'IP007', '2024-04-10', 15000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL017', 'IP008', '2024-05-05', 9000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL018', 'IP009', '2024-06-20', 17000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL019', 'IP010', '2024-07-15', 22000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL020', 'IP001', '2024-08-01', 12000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL021', 'IP002', '2024-09-12', 3000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL022', 'IP003', '2024-10-20', 11000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL023', 'IP004', '2024-11-05', 7500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL024', 'IP005', '2024-12-15', 18000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL025', 'IP006', '2025-01-20', 5000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL026', 'IP007', '2025-02-10', 10000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL027', 'IP008', '2025-03-15', 13000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL028', 'IP009', '2025-04-20', 15000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL029', 'IP010', '2025-05-25', 25000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL030', 'IP001', '2025-06-01', 11000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL031', 'IP002', '2025-07-15', 4000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL032', 'IP003', '2025-08-20', 12000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL033', 'IP004', '2025-09-10', 9000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL034', 'IP005', '2025-10-25', 14000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL035', 'IP006', '2025-11-15', 7000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL036', 'IP007', '2025-12-20', 16000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL037', 'IP008', '2026-01-10', 9500.00, 'Approved');
+INSERT INTO Claim VALUES ('CL038', 'IP009', '2026-02-25', 18000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL039', 'IP010', '2026-03-20', 23000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL040', 'IP001', '2026-04-05', 14000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL041', 'IP002', '2026-05-15', 5000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL042', 'IP003', '2026-06-20', 10000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL043', 'IP004', '2026-07-10', 8000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL044', 'IP005', '2026-08-25', 12000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL045', 'IP006', '2026-09-15', 6500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL046', 'IP007', '2026-10-20', 11000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL047', 'IP008', '2026-11-05', 13000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL048', 'IP009', '2026-12-15', 17000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL049', 'IP010', '2027-01-20', 24000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL050', 'IP001', '2027-02-10', 12500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL051', 'IP002', '2027-03-20', 6000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL052', 'IP003', '2027-04-15', 14000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL053', 'IP004', '2027-05-25', 9500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL054', 'IP005', '2027-06-20', 15000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL055', 'IP006', '2027-07-15', 5000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL056', 'IP007', '2027-08-10', 13000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL057', 'IP008', '2027-09-20', 11500.00, 'Approved');
+INSERT INTO Claim VALUES ('CL058', 'IP009', '2027-10-25', 18000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL059', 'IP010', '2027-11-15', 21000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL060', 'IP001', '2027-12-10', 11000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL061', 'IP002', '2028-01-20', 3000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL062', 'IP003', '2028-02-25', 12000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL063', 'IP004', '2028-03-10', 8500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL064', 'IP005', '2028-04-15', 14000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL065', 'IP006', '2028-05-20', 5500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL066', 'IP007', '2028-06-25', 10500.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL067', 'IP008', '2028-07-15', 12500.00, 'Approved');
+INSERT INTO Claim VALUES ('CL068', 'IP009', '2028-08-20', 16000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL069', 'IP010', '2028-09-25', 25000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL070', 'IP001', '2028-10-05', 12000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL071', 'IP002', '2028-11-15', 4000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL072', 'IP003', '2028-12-20', 11000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL073', 'IP004', '2029-01-10', 9500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL074', 'IP005', '2029-02-25', 16000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL075', 'IP006', '2029-03-15', 6000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL076', 'IP007', '2029-04-20', 10000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL077', 'IP008', '2029-05-25', 14000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL078', 'IP009', '2029-06-15', 15000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL079', 'IP010', '2029-07-10', 23000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL080', 'IP001', '2029-08-20', 13000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL081', 'IP002', '2029-09-25', 5000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL082', 'IP003', '2029-10-30', 12000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL083', 'IP004', '2029-11-15', 8500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL084', 'IP005', '2029-12-20', 15000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL085', 'IP006', '2030-01-10', 6500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL086', 'IP007', '2030-02-25', 12000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL087', 'IP008', '2030-03-15', 13500.00, 'Approved');
+INSERT INTO Claim VALUES ('CL088', 'IP009', '2030-04-20', 17000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL089', 'IP010', '2030-05-25', 24000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL090', 'IP001', '2030-06-10', 11000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL091', 'IP002', '2030-07-15', 6000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL092', 'IP003', '2030-08-20', 13000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL093', 'IP004', '2030-09-10', 9500.00, 'Pending');
+INSERT INTO Claim VALUES ('CL094', 'IP005', '2030-10-25', 14000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL095', 'IP006', '2030-11-15', 7000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL096', 'IP007', '2030-12-20', 10000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL097', 'IP008', '2031-01-10', 11000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL098', 'IP009', '2031-02-25', 16000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL099', 'IP010', '2031-03-20', 22000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL100', 'IP001', '2031-04-15', 14000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL101', 'IP002', '2023-05-10', 25000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL102', 'IP003', '2023-08-22', 32000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL103', 'IP004', '2023-12-05', 15000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL104', 'IP005', '2024-01-15', 50000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL105', 'IP006', '2024-02-20', 28000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL106', 'IP007', '2024-03-30', 12000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL107', 'IP008', '2024-04-25', 45000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL108', 'IP009', '2024-06-01', 19000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL109', 'IP010', '2024-07-15', 22000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL110', 'IP011', '2024-08-10', 31000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL111', 'IP012', '2024-09-20', 27000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL112', 'IP013', '2024-10-05', 35000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL113', 'IP014', '2024-11-25', 15000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL114', 'IP015', '2024-12-30', 38000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL115', 'IP016', '2025-01-15', 42000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL116', 'IP017', '2025-03-01', 16000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL117', 'IP018', '2025-04-20', 23000.00, 'Pending');
+INSERT INTO Claim VALUES ('CL118', 'IP019', '2025-05-10', 29000.00, 'Approved');
+INSERT INTO Claim VALUES ('CL119', 'IP020', '2025-06-25', 14000.00, 'Rejected');
+INSERT INTO Claim VALUES ('CL120', 'IP021', '2025-07-15', 36000.00, 'Pending');
+
+
+
+
+
+INSERT INTO Purchase VALUES ('2023-01-01', 'I001', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2023-01-15', 'I002', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2023-02-20', 'I003', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2023-03-25', 'I004', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2023-04-10', 'I005', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2023-05-05', 'I006', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2023-06-18', 'I007', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2023-07-22', 'I008', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2023-08-12', 'I009', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2023-09-09', 'I010', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2023-10-01', 'I001', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2023-10-15', 'I002', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2023-11-01', 'I003', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2023-11-20', 'I004', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2023-12-01', 'I005', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2023-12-15', 'I006', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2024-01-05', 'I007', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2024-01-20', 'I008', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2024-02-10', 'I009', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2024-02-25', 'I010', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2024-03-15', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2024-04-01', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2024-04-20', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2024-05-05', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2024-05-15', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2024-06-01', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2024-06-20', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2024-07-01', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2024-07-15', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2024-08-01', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2024-08-15', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2024-09-01', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2024-09-15', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2024-10-01', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2024-10-15', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2024-11-01', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2024-11-20', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2024-12-01', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2024-12-15', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2025-01-05', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2025-01-20', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2025-02-10', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2025-02-25', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2025-03-15', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2025-04-01', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2025-04-15', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2025-05-01', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2025-05-15', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2025-06-01', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2025-06-20', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2025-07-01', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2025-07-15', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2025-08-01', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2025-08-15', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2025-09-01', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2025-09-15', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2025-10-01', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2025-10-15', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2025-11-01', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2025-11-15', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2025-12-01', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2025-12-15', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2026-01-05', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2026-01-20', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2026-02-10', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2026-02-25', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2026-03-15', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2026-04-01', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2026-04-15', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2026-05-01', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2026-05-15', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2026-06-01', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2026-06-15', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2026-07-01', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2026-07-15', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2026-08-01', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2026-08-15', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2026-09-01', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2026-09-15', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2026-10-01', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2026-10-15', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2026-11-01', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2026-11-15', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2026-12-01', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2026-12-15', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2027-01-05', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2027-01-20', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2027-02-10', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2027-02-25', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2027-03-15', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2027-04-01', 'I001', 'P003', 399.98, 2);
+INSERT INTO Purchase VALUES ('2027-04-15', 'I002', 'P004', 299.99, 1);
+INSERT INTO Purchase VALUES ('2027-05-01', 'I003', 'P005', 149.99, 1);
+INSERT INTO Purchase VALUES ('2027-05-15', 'I004', 'P006', 89.99, 1);
+INSERT INTO Purchase VALUES ('2027-06-01', 'I005', 'P007', 99.98, 2);
+INSERT INTO Purchase VALUES ('2027-06-15', 'I006', 'P008', 1199.98, 2);
+INSERT INTO Purchase VALUES ('2027-07-01', 'I007', 'P009', 249.99, 1);
+INSERT INTO Purchase VALUES ('2027-07-15', 'I008', 'P010', 199.99, 1);
+INSERT INTO Purchase VALUES ('2027-08-01', 'I009', 'P001', 1999.98, 2);
+INSERT INTO Purchase VALUES ('2027-08-15', 'I010', 'P002', 699.99, 1);
+INSERT INTO Purchase VALUES ('2023-05-12', 'I011', 'P003', 1499.99, 1);
+INSERT INTO Purchase VALUES ('2023-06-22', 'I012', 'P004', 299.99, 2);
+INSERT INTO Purchase VALUES ('2023-07-10', 'I013', 'P005', 999.99, 1);
+INSERT INTO Purchase VALUES ('2023-08-25', 'I014', 'P006', 399.99, 3);
+INSERT INTO Purchase VALUES ('2023-09-30', 'I015', 'P007', 159.99, 4);
+INSERT INTO Purchase VALUES ('2023-10-15', 'I016', 'P008', 249.99, 1);
+INSERT INTO Purchase VALUES ('2023-11-05', 'I017', 'P009', 599.99, 2);
+INSERT INTO Purchase VALUES ('2023-12-01', 'I018', 'P010', 129.99, 5);
+INSERT INTO Purchase VALUES ('2024-01-10', 'I019', 'P011', 499.99, 1);
+INSERT INTO Purchase VALUES ('2024-02-22', 'I020', 'P012', 749.99, 3);
+INSERT INTO Purchase VALUES ('2024-03-18', 'I021', 'P013', 89.99, 2);
+INSERT INTO Purchase VALUES ('2024-04-12', 'I022', 'P014', 349.99, 1);
+INSERT INTO Purchase VALUES ('2024-05-25', 'I023', 'P015', 279.99, 2);
+INSERT INTO Purchase VALUES ('2024-06-30', 'I024', 'P016', 1199.99, 1);
+INSERT INTO Purchase VALUES ('2024-07-10', 'I025', 'P017', 349.99, 4);
+INSERT INTO Purchase VALUES ('2024-08-15', 'I026', 'P018', 89.99, 1);
+INSERT INTO Purchase VALUES ('2024-09-05', 'I027', 'P019', 799.99, 2);
+INSERT INTO Purchase VALUES ('2024-10-20', 'I028', 'P020', 499.99, 3);
+INSERT INTO Purchase VALUES ('2024-11-25', 'I029', 'P021', 249.99, 1);
+INSERT INTO Purchase VALUES ('2024-12-15', 'I030', 'P022', 329.99, 2);
+INSERT INTO Purchase VALUES ('2025-01-30', 'I031', 'P023', 479.99, 1);
+
+
+
+
+INSERT INTO MaintenanceEvent VALUES ('ME001', 'AP001', 'PA001', '2023-01-01', 5000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME002', 'AP002', 'PA002', '2023-02-01', 7000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME003', 'AP003', 'PA003', '2023-03-01', 3000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME004', 'AP004', 'PA004', '2023-04-01', 6000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME005', 'AP005', 'PA005', '2023-05-01', 8000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME006', 'AP006', 'PA006', '2023-06-01', 4000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME007', 'AP007', 'PA007', '2023-07-01', 3500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME008', 'AP008', 'PA008', '2023-08-01', 4500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME009', 'AP009', 'PA009', '2023-09-01', 5500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME010', 'AP010', 'PA010', '2023-10-01', 2500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME011', 'AP001', 'PA002', '2023-11-01', 6500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME012', 'AP002', 'PA003', '2023-12-01', 7200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME013', 'AP003', 'PA004', '2024-01-01', 3100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME014', 'AP004', 'PA005', '2024-02-01', 6200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME015', 'AP005', 'PA006', '2024-03-01', 8100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME016', 'AP006', 'PA007', '2024-04-01', 4100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME017', 'AP007', 'PA008', '2024-05-01', 3600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME018', 'AP008', 'PA009', '2024-06-01', 4600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME019', 'AP009', 'PA010', '2024-07-01', 5700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME020', 'AP010', 'PA001', '2024-08-01', 2600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME021', 'AP001', 'PA003', '2024-09-01', 6800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME022', 'AP002', 'PA004', '2024-10-01', 7300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME023', 'AP003', 'PA005', '2024-11-01', 3200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME024', 'AP004', 'PA006', '2024-12-01', 6300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME025', 'AP005', 'PA007', '2025-01-01', 8200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME026', 'AP006', 'PA008', '2025-02-01', 4200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME027', 'AP007', 'PA009', '2025-03-01', 3700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME028', 'AP008', 'PA010', '2025-04-01', 4700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME029', 'AP009', 'PA001', '2025-05-01', 5800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME030', 'AP010', 'PA002', '2025-06-01', 2700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME031', 'AP001', 'PA004', '2025-07-01', 6900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME032', 'AP002', 'PA005', '2025-08-01', 7400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME033', 'AP003', 'PA006', '2025-09-01', 3300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME034', 'AP004', 'PA007', '2025-10-01', 6400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME035', 'AP005', 'PA008', '2025-11-01', 8300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME036', 'AP006', 'PA009', '2025-12-01', 4300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME037', 'AP007', 'PA010', '2026-01-01', 3800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME038', 'AP008', 'PA001', '2026-02-01', 4800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME039', 'AP009', 'PA002', '2026-03-01', 5900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME040', 'AP010', 'PA003', '2026-04-01', 2800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME041', 'AP001', 'PA005', '2026-05-01', 7000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME042', 'AP002', 'PA006', '2026-06-01', 7500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME043', 'AP003', 'PA007', '2026-07-01', 3400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME044', 'AP004', 'PA008', '2026-08-01', 6500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME045', 'AP005', 'PA009', '2026-09-01', 8400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME046', 'AP006', 'PA010', '2026-10-01', 4400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME047', 'AP007', 'PA001', '2026-11-01', 3900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME048', 'AP008', 'PA002', '2026-12-01', 4900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME049', 'AP009', 'PA003', '2027-01-01', 6000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME050', 'AP010', 'PA004', '2027-02-01', 2900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME051', 'AP001', 'PA006', '2027-03-01', 7100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME052', 'AP002', 'PA007', '2027-04-01', 7600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME053', 'AP003', 'PA008', '2027-05-01', 3500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME054', 'AP004', 'PA009', '2027-06-01', 6600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME055', 'AP005', 'PA010', '2027-07-01', 8500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME056', 'AP006', 'PA001', '2027-08-01', 4500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME057', 'AP007', 'PA002', '2027-09-01', 4000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME058', 'AP008', 'PA003', '2027-10-01', 5000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME059', 'AP009', 'PA004', '2027-11-01', 6100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME060', 'AP010', 'PA005', '2027-12-01', 3000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME061', 'AP001', 'PA007', '2028-01-01', 7200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME062', 'AP002', 'PA008', '2028-02-01', 7700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME063', 'AP003', 'PA009', '2028-03-01', 3600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME064', 'AP004', 'PA010', '2028-04-01', 6700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME065', 'AP005', 'PA001', '2028-05-01', 8600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME066', 'AP006', 'PA002', '2028-06-01', 4600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME067', 'AP007', 'PA003', '2028-07-01', 4100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME068', 'AP008', 'PA004', '2028-08-01', 5200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME069', 'AP009', 'PA005', '2028-09-01', 6200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME070', 'AP010', 'PA006', '2028-10-01', 3100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME071', 'AP001', 'PA009', '2028-11-01', 7300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME072', 'AP002', 'PA010', '2028-12-01', 7800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME073', 'AP003', 'PA001', '2029-01-01', 3700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME074', 'AP004', 'PA002', '2029-02-01', 6800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME075', 'AP005', 'PA003', '2029-03-01', 8700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME076', 'AP006', 'PA004', '2029-04-01', 4700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME077', 'AP007', 'PA005', '2029-05-01', 4200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME078', 'AP008', 'PA006', '2029-06-01', 5300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME079', 'AP009', 'PA007', '2029-07-01', 6300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME080', 'AP010', 'PA008', '2029-08-01', 3200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME081', 'AP001', 'PA010', '2029-09-01', 7400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME082', 'AP002', 'PA001', '2029-10-01', 7900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME083', 'AP003', 'PA002', '2029-11-01', 3800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME084', 'AP004', 'PA003', '2029-12-01', 6900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME085', 'AP005', 'PA004', '2030-01-01', 8800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME086', 'AP006', 'PA005', '2030-02-01', 4800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME087', 'AP007', 'PA006', '2030-03-01', 4300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME088', 'AP008', 'PA007', '2030-04-01', 5400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME089', 'AP009', 'PA008', '2030-05-01', 6400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME090', 'AP010', 'PA009', '2030-06-01', 3300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME091', 'AP001', 'PA002', '2030-07-01', 7500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME092', 'AP002', 'PA003', '2030-08-01', 8000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME093', 'AP003', 'PA004', '2030-09-01', 3900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME094', 'AP004', 'PA005', '2030-10-01', 7000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME095', 'AP005', 'PA006', '2030-11-01', 8900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME096', 'AP006', 'PA007', '2030-12-01', 4900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME097', 'AP007', 'PA008', '2031-01-01', 4400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME098', 'AP008', 'PA009', '2031-02-01', 5500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME099', 'AP009', 'PA010', '2031-03-01', 6500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME100', 'AP010', 'PA001', '2031-04-01', 3400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME101', 'AP011', 'PA002', '2023-05-15', 4500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME102', 'AP012', 'PA003', '2023-06-10', 5200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME103', 'AP013', 'PA004', '2023-07-22', 3700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME104', 'AP014', 'PA005', '2023-08-14', 6000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME105', 'AP015', 'PA006', '2023-09-01', 2800.00);
+INSERT INTO MaintenanceEvent VALUES ('ME106', 'AP016', 'PA007', '2023-10-30', 3200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME107', 'AP017', 'PA008', '2023-11-15', 4100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME108', 'AP018', 'PA009', '2023-12-05', 5000.00);
+INSERT INTO MaintenanceEvent VALUES ('ME109', 'AP019', 'PA010', '2024-01-25', 3700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME110', 'AP020', 'PA011', '2024-02-18', 4500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME111', 'AP021', 'PA012', '2024-03-30', 5500.00);
+INSERT INTO MaintenanceEvent VALUES ('ME112', 'AP022', 'PA013', '2024-04-15', 2900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME113', 'AP023', 'PA014', '2024-05-20', 6200.00);
+INSERT INTO MaintenanceEvent VALUES ('ME114', 'AP024', 'PA015', '2024-06-10', 3400.00);
+INSERT INTO MaintenanceEvent VALUES ('ME115', 'AP025', 'PA016', '2024-07-25', 4600.00);
+INSERT INTO MaintenanceEvent VALUES ('ME116', 'AP026', 'PA017', '2024-08-15', 3100.00);
+INSERT INTO MaintenanceEvent VALUES ('ME117', 'AP027', 'PA018', '2024-09-05', 5300.00);
+INSERT INTO MaintenanceEvent VALUES ('ME118', 'AP028', 'PA019', '2024-10-01', 2900.00);
+INSERT INTO MaintenanceEvent VALUES ('ME119', 'AP029', 'PA020', '2024-11-20', 4700.00);
+INSERT INTO MaintenanceEvent VALUES ('ME120', 'AP030', 'PA021', '2024-12-10', 3500.00);
+
+
+
+
+
+INSERT INTO Flights VALUES ('FL001', 'R001', 'AP001', 'NY-LA-1001', '2023-09-10 10:00:00', '2023-09-10 16:00:00');
+INSERT INTO Flights VALUES ('FL002', 'R002', 'AP002', 'LD-PA-1002', '2023-09-11 08:00:00', '2023-09-11 09:00:00');
+INSERT INTO Flights VALUES ('FL003', 'R003', 'AP003', 'TK-SL-1003', '2023-09-12 12:00:00', '2023-09-12 14:00:00');
+INSERT INTO Flights VALUES ('FL004', 'R004', 'AP004', 'SY-ME-1004', '2023-09-13 07:00:00', '2023-09-13 08:00:00');
+INSERT INTO Flights VALUES ('FL005', 'R005', 'AP005', 'TO-VA-1005', '2023-09-14 09:00:00', '2023-09-14 14:00:00');
+INSERT INTO Flights VALUES ('FL006', 'R006', 'AP006', 'BE-MU-1006', '2023-09-15 15:00:00', '2023-09-15 16:00:00');
+INSERT INTO Flights VALUES ('FL007', 'R007', 'AP007', 'DU-MU-1007', '2023-09-16 10:00:00', '2023-09-16 13:00:00');
+INSERT INTO Flights VALUES ('FL008', 'R008', 'AP008', 'SF-CH-1008', '2023-09-17 11:00:00', '2023-09-17 15:00:00');
+INSERT INTO Flights VALUES ('FL009', 'R009', 'AP009', 'BJ-SH-1009', '2023-09-18 06:00:00', '2023-09-18 08:00:00');
+INSERT INTO Flights VALUES ('FL010', 'R010', 'AP010', 'MS-SP-1010', '2023-09-19 05:00:00', '2023-09-19 06:00:00');
+INSERT INTO Flights VALUES ('FL011', 'R001', 'AP002', 'NY-LA-1011', '2023-09-20 10:00:00', '2023-09-20 16:00:00');
+INSERT INTO Flights VALUES ('FL012', 'R002', 'AP003', 'LD-PA-1012', '2023-09-21 08:00:00', '2023-09-21 09:00:00');
+INSERT INTO Flights VALUES ('FL013', 'R003', 'AP004', 'TK-SL-1013', '2023-09-22 12:00:00', '2023-09-22 14:00:00');
+INSERT INTO Flights VALUES ('FL014', 'R004', 'AP005', 'SY-ME-1014', '2023-09-23 07:00:00', '2023-09-23 08:00:00');
+INSERT INTO Flights VALUES ('FL015', 'R005', 'AP006', 'TO-VA-1015', '2023-09-24 09:00:00', '2023-09-24 14:00:00');
+INSERT INTO Flights VALUES ('FL016', 'R006', 'AP007', 'BE-MU-1016', '2023-09-25 15:00:00', '2023-09-25 16:00:00');
+INSERT INTO Flights VALUES ('FL017', 'R007', 'AP008', 'DU-MU-1017', '2023-09-26 10:00:00', '2023-09-26 13:00:00');
+INSERT INTO Flights VALUES ('FL018', 'R008', 'AP009', 'SF-CH-1018', '2023-09-27 11:00:00', '2023-09-27 15:00:00');
+INSERT INTO Flights VALUES ('FL019', 'R009', 'AP010', 'BJ-SH-1019', '2023-09-28 06:00:00', '2023-09-28 08:00:00');
+INSERT INTO Flights VALUES ('FL020', 'R010', 'AP001', 'MS-SP-1020', '2023-09-29 05:00:00', '2023-09-29 06:00:00');
+INSERT INTO Flights VALUES ('FL021', 'R001', 'AP003', 'NY-LA-1021', '2023-09-30 10:00:00', '2023-09-30 16:00:00');
+INSERT INTO Flights VALUES ('FL022', 'R002', 'AP004', 'LD-PA-1022', '2023-10-01 08:00:00', '2023-10-01 09:00:00');
+INSERT INTO Flights VALUES ('FL023', 'R003', 'AP005', 'TK-SL-1023', '2023-10-02 12:00:00', '2023-10-02 14:00:00');
+INSERT INTO Flights VALUES ('FL024', 'R004', 'AP006', 'SY-ME-1024', '2023-10-03 07:00:00', '2023-10-03 08:00:00');
+INSERT INTO Flights VALUES ('FL025', 'R005', 'AP007', 'TO-VA-1025', '2023-10-04 09:00:00', '2023-10-04 14:00:00');
+INSERT INTO Flights VALUES ('FL026', 'R006', 'AP008', 'BE-MU-1026', '2023-10-05 15:00:00', '2023-10-05 16:00:00');
+INSERT INTO Flights VALUES ('FL027', 'R007', 'AP009', 'DU-MU-1027', '2023-10-06 10:00:00', '2023-10-06 13:00:00');
+INSERT INTO Flights VALUES ('FL028', 'R008', 'AP010', 'SF-CH-1028', '2023-10-07 11:00:00', '2023-10-07 15:00:00');
+INSERT INTO Flights VALUES ('FL029', 'R009', 'AP001', 'BJ-SH-1029', '2023-10-08 06:00:00', '2023-10-08 08:00:00');
+INSERT INTO Flights VALUES ('FL030', 'R010', 'AP002', 'MS-SP-1030', '2023-10-09 05:00:00', '2023-10-09 06:00:00');
+INSERT INTO Flights VALUES ('FL031', 'R001', 'AP004', 'NY-LA-1031', '2023-10-10 10:00:00', '2023-10-10 16:00:00');
+INSERT INTO Flights VALUES ('FL032', 'R002', 'AP005', 'LD-PA-1032', '2023-10-11 08:00:00', '2023-10-11 09:00:00');
+INSERT INTO Flights VALUES ('FL033', 'R003', 'AP006', 'TK-SL-1033', '2023-10-12 12:00:00', '2023-10-12 14:00:00');
+INSERT INTO Flights VALUES ('FL034', 'R004', 'AP007', 'SY-ME-1034', '2023-10-13 07:00:00', '2023-10-13 08:00:00');
+INSERT INTO Flights VALUES ('FL035', 'R005', 'AP008', 'TO-VA-1035', '2023-10-14 09:00:00', '2023-10-14 14:00:00');
+INSERT INTO Flights VALUES ('FL036', 'R006', 'AP009', 'BE-MU-1036', '2023-10-15 15:00:00', '2023-10-15 16:00:00');
+INSERT INTO Flights VALUES ('FL037', 'R007', 'AP010', 'DU-MU-1037', '2023-10-16 10:00:00', '2023-10-16 13:00:00');
+INSERT INTO Flights VALUES ('FL038', 'R008', 'AP001', 'SF-CH-1038', '2023-10-17 11:00:00', '2023-10-17 15:00:00');
+INSERT INTO Flights VALUES ('FL039', 'R009', 'AP002', 'BJ-SH-1039', '2023-10-18 06:00:00', '2023-10-18 08:00:00');
+INSERT INTO Flights VALUES ('FL040', 'R010', 'AP003', 'MS-SP-1040', '2023-10-19 05:00:00', '2023-10-19 06:00:00');
+INSERT INTO Flights VALUES ('FL041', 'R001', 'AP005', 'NY-LA-1041', '2023-10-20 10:00:00', '2023-10-20 16:00:00');
+INSERT INTO Flights VALUES ('FL042', 'R002', 'AP006', 'LD-PA-1042', '2023-10-21 08:00:00', '2023-10-21 09:00:00');
+INSERT INTO Flights VALUES ('FL043', 'R003', 'AP007', 'TK-SL-1043', '2023-10-22 12:00:00', '2023-10-22 14:00:00');
+INSERT INTO Flights VALUES ('FL044', 'R004', 'AP008', 'SY-ME-1044', '2023-10-23 07:00:00', '2023-10-23 08:00:00');
+INSERT INTO Flights VALUES ('FL045', 'R005', 'AP009', 'TO-VA-1045', '2023-10-24 09:00:00', '2023-10-24 14:00:00');
+INSERT INTO Flights VALUES ('FL046', 'R006', 'AP010', 'BE-MU-1046', '2023-10-25 15:00:00', '2023-10-25 16:00:00');
+INSERT INTO Flights VALUES ('FL047', 'R007', 'AP001', 'DU-MU-1047', '2023-10-26 10:00:00', '2023-10-26 13:00:00');
+INSERT INTO Flights VALUES ('FL048', 'R008', 'AP002', 'SF-CH-1048', '2023-10-27 11:00:00', '2023-10-27 15:00:00');
+INSERT INTO Flights VALUES ('FL049', 'R009', 'AP003', 'BJ-SH-1049', '2023-10-28 06:00:00', '2023-10-28 08:00:00');
+INSERT INTO Flights VALUES ('FL050', 'R010', 'AP004', 'MS-SP-1050', '2023-10-29 05:00:00', '2023-10-29 06:00:00');
+INSERT INTO Flights VALUES ('FL051', 'R001', 'AP007', 'NY-LA-1051', '2023-10-30 10:00:00', '2023-10-30 16:00:00');
+INSERT INTO Flights VALUES ('FL052', 'R002', 'AP008', 'LD-PA-1052', '2023-10-31 08:00:00', '2023-10-31 09:00:00');
+INSERT INTO Flights VALUES ('FL053', 'R003', 'AP009', 'TK-SL-1053', '2023-11-01 12:00:00', '2023-11-01 14:00:00');
+INSERT INTO Flights VALUES ('FL054', 'R004', 'AP010', 'SY-ME-1054', '2023-11-02 07:00:00', '2023-11-02 08:00:00');
+INSERT INTO Flights VALUES ('FL055', 'R005', 'AP001', 'TO-VA-1055', '2023-11-03 09:00:00', '2023-11-03 14:00:00');
+INSERT INTO Flights VALUES ('FL056', 'R006', 'AP002', 'BE-MU-1056', '2023-11-04 15:00:00', '2023-11-04 16:00:00');
+INSERT INTO Flights VALUES ('FL057', 'R007', 'AP003', 'DU-MU-1057', '2023-11-05 10:00:00', '2023-11-05 13:00:00');
+INSERT INTO Flights VALUES ('FL058', 'R008', 'AP004', 'SF-CH-1058', '2023-11-06 11:00:00', '2023-11-06 15:00:00');
+INSERT INTO Flights VALUES ('FL059', 'R009', 'AP005', 'BJ-SH-1059', '2023-11-07 06:00:00', '2023-11-07 08:00:00');
+INSERT INTO Flights VALUES ('FL060', 'R010', 'AP006', 'MS-SP-1060', '2023-11-08 05:00:00', '2023-11-08 06:00:00');
+INSERT INTO Flights VALUES ('FL061', 'R001', 'AP009', 'NY-LA-1061', '2023-11-09 10:00:00', '2023-11-09 16:00:00');
+INSERT INTO Flights VALUES ('FL062', 'R002', 'AP010', 'LD-PA-1062', '2023-11-10 08:00:00', '2023-11-10 09:00:00');
+INSERT INTO Flights VALUES ('FL063', 'R003', 'AP001', 'TK-SL-1063', '2023-11-11 12:00:00', '2023-11-11 14:00:00');
+INSERT INTO Flights VALUES ('FL064', 'R004', 'AP002', 'SY-ME-1064', '2023-11-12 07:00:00', '2023-11-12 08:00:00');
+INSERT INTO Flights VALUES ('FL065', 'R005', 'AP003', 'TO-VA-1065', '2023-11-13 09:00:00', '2023-11-13 14:00:00');
+INSERT INTO Flights VALUES ('FL066', 'R006', 'AP004', 'BE-MU-1066', '2023-11-14 15:00:00', '2023-11-14 16:00:00');
+INSERT INTO Flights VALUES ('FL067', 'R007', 'AP005', 'DU-MU-1067', '2023-11-15 10:00:00', '2023-11-15 13:00:00');
+INSERT INTO Flights VALUES ('FL068', 'R008', 'AP006', 'SF-CH-1068', '2023-11-16 11:00:00', '2023-11-16 15:00:00');
+INSERT INTO Flights VALUES ('FL069', 'R009', 'AP007', 'BJ-SH-1069', '2023-11-17 06:00:00', '2023-11-17 08:00:00');
+INSERT INTO Flights VALUES ('FL070', 'R010', 'AP008', 'MS-SP-1070', '2023-11-18 05:00:00', '2023-11-18 06:00:00');
+INSERT INTO Flights VALUES ('FL071', 'R001', 'AP010', 'NY-LA-1071', '2023-11-19 10:00:00', '2023-11-19 16:00:00');
+INSERT INTO Flights VALUES ('FL072', 'R002', 'AP001', 'LD-PA-1072', '2023-11-20 08:00:00', '2023-11-20 09:00:00');
+INSERT INTO Flights VALUES ('FL073', 'R003', 'AP002', 'TK-SL-1073', '2023-11-21 12:00:00', '2023-11-21 14:00:00');
+INSERT INTO Flights VALUES ('FL074', 'R004', 'AP003', 'SY-ME-1074', '2023-11-22 07:00:00', '2023-11-22 08:00:00');
+INSERT INTO Flights VALUES ('FL075', 'R005', 'AP004', 'TO-VA-1075', '2023-11-23 09:00:00', '2023-11-23 14:00:00');
+INSERT INTO Flights VALUES ('FL076', 'R006', 'AP005', 'BE-MU-1076', '2023-11-24 15:00:00', '2023-11-24 16:00:00');
+INSERT INTO Flights VALUES ('FL077', 'R007', 'AP006', 'DU-MU-1077', '2023-11-25 10:00:00', '2023-11-25 13:00:00');
+INSERT INTO Flights VALUES ('FL078', 'R008', 'AP007', 'SF-CH-1078', '2023-11-26 11:00:00', '2023-11-26 15:00:00');
+INSERT INTO Flights VALUES ('FL079', 'R009', 'AP008', 'BJ-SH-1079', '2023-11-27 06:00:00', '2023-11-27 08:00:00');
+INSERT INTO Flights VALUES ('FL080', 'R010', 'AP009', 'MS-SP-1080', '2023-11-28 05:00:00', '2023-11-28 06:00:00');
+INSERT INTO Flights VALUES ('FL081', 'R001', 'AP010', 'NY-LA-1081', '2023-11-29 10:00:00', '2023-11-29 16:00:00');
+INSERT INTO Flights VALUES ('FL082', 'R002', 'AP001', 'LD-PA-1082', '2023-11-30 08:00:00', '2023-11-30 09:00:00');
+INSERT INTO Flights VALUES ('FL083', 'R003', 'AP002', 'TK-SL-1083', '2023-12-01 12:00:00', '2023-12-01 14:00:00');
+INSERT INTO Flights VALUES ('FL084', 'R004', 'AP003', 'SY-ME-1084', '2023-12-02 07:00:00', '2023-12-02 08:00:00');
+INSERT INTO Flights VALUES ('FL085', 'R005', 'AP004', 'TO-VA-1085', '2023-12-03 09:00:00', '2023-12-03 14:00:00');
+INSERT INTO Flights VALUES ('FL086', 'R006', 'AP005', 'BE-MU-1086', '2023-12-04 15:00:00', '2023-12-04 16:00:00');
+INSERT INTO Flights VALUES ('FL087', 'R007', 'AP006', 'DU-MU-1087', '2023-12-05 10:00:00', '2023-12-05 13:00:00');
+INSERT INTO Flights VALUES ('FL088', 'R008', 'AP007', 'SF-CH-1088', '2023-12-06 11:00:00', '2023-12-06 15:00:00');
+INSERT INTO Flights VALUES ('FL089', 'R009', 'AP008', 'BJ-SH-1089', '2023-12-07 06:00:00', '2023-12-07 08:00:00');
+INSERT INTO Flights VALUES ('FL090', 'R010', 'AP009', 'MS-SP-1090', '2023-12-08 05:00:00', '2023-12-08 06:00:00');
+INSERT INTO Flights VALUES ('FL091', 'R001', 'AP002', 'NY-LA-1091', '2023-12-09 10:00:00', '2023-12-09 16:00:00');
+INSERT INTO Flights VALUES ('FL092', 'R002', 'AP003', 'LD-PA-1092', '2023-12-10 08:00:00', '2023-12-10 09:00:00');
+INSERT INTO Flights VALUES ('FL093', 'R003', 'AP004', 'TK-SL-1093', '2023-12-11 12:00:00', '2023-12-11 14:00:00');
+INSERT INTO Flights VALUES ('FL094', 'R004', 'AP005', 'SY-ME-1094', '2023-12-12 07:00:00', '2023-12-12 08:00:00');
+INSERT INTO Flights VALUES ('FL095', 'R005', 'AP006', 'TO-VA-1095', '2023-12-13 09:00:00', '2023-12-13 14:00:00');
+INSERT INTO Flights VALUES ('FL096', 'R006', 'AP007', 'BE-MU-1096', '2023-12-14 15:00:00', '2023-12-14 16:00:00');
+INSERT INTO Flights VALUES ('FL097', 'R007', 'AP008', 'DU-MU-1097', '2023-12-15 10:00:00', '2023-12-15 13:00:00');
+INSERT INTO Flights VALUES ('FL098', 'R008', 'AP009', 'SF-CH-1098', '2023-12-16 11:00:00', '2023-12-16 15:00:00');
+INSERT INTO Flights VALUES ('FL099', 'R009', 'AP010', 'BJ-SH-1099', '2023-12-17 06:00:00', '2023-12-17 08:00:00');
+INSERT INTO Flights VALUES ('FL100', 'R010', 'AP001', 'MS-SP-1100', '2023-12-18 05:00:00', '2023-12-18 06:00:00');
+INSERT INTO Flights VALUES ('FL101', 'R011', 'AP002', 'MS-LA-1230', '2024-01-05 07:30:00', '2024-01-05 09:15:00');
+INSERT INTO Flights VALUES ('FL102', 'R012', 'AP003', 'LA-NY-1400', '2024-02-10 10:00:00', '2024-02-10 14:00:00');
+INSERT INTO Flights VALUES ('FL103', 'R013', 'AP004', 'NY-LA-1630', '2024-03-15 12:30:00', '2024-03-15 16:45:00');
+INSERT INTO Flights VALUES ('FL104', 'R014', 'AP005', 'LA-SF-1820', '2024-04-20 15:00:00', '2024-04-20 16:30:00');
+INSERT INTO Flights VALUES ('FL105', 'R015', 'AP006', 'SF-DEN-0915', '2024-05-25 08:00:00', '2024-05-25 11:30:00');
+INSERT INTO Flights VALUES ('FL106', 'R016', 'AP007', 'DEN-MIAMI-2045', '2024-06-30 18:30:00', '2024-06-30 22:00:00');
+INSERT INTO Flights VALUES ('FL107', 'R017', 'AP008', 'MIAMI-NY-1025', '2024-07-15 09:00:00', '2024-07-15 12:30:00');
+INSERT INTO Flights VALUES ('FL108', 'R018', 'AP009', 'NY-LON-1200', '2024-08-20 16:00:00', '2024-08-20 21:00:00');
+INSERT INTO Flights VALUES ('FL109', 'R019', 'AP010', 'LON-AMS-0700', '2024-09-10 08:30:00', '2024-09-10 10:15:00');
+INSERT INTO Flights VALUES ('FL110', 'R020', 'AP011', 'AMS-BER-1530', '2024-10-05 12:45:00', '2024-10-05 14:30:00');
+INSERT INTO Flights VALUES ('FL111', 'R021', 'AP012', 'BER-MAD-2100', '2024-11-20 18:00:00', '2024-11-20 19:45:00');
+INSERT INTO Flights VALUES ('FL112', 'R022', 'AP013', 'MAD-IST-1125', '2024-12-15 09:00:00', '2024-12-15 13:00:00');
+INSERT INTO Flights VALUES ('FL113', 'R023', 'AP014', 'IST-TOK-1530', '2025-01-10 13:00:00', '2025-01-10 20:00:00');
+INSERT INTO Flights VALUES ('FL114', 'R024', 'AP015', 'TOK-SYD-0920', '2025-02-25 08:30:00', '2025-02-25 19:00:00');
+INSERT INTO Flights VALUES ('FL115', 'R025', 'AP016', 'SYD-AKL-1145', '2025-03-20 10:00:00', '2025-03-20 14:00:00');
+INSERT INTO Flights VALUES ('FL116', 'R026', 'AP017', 'AKL-HNL-1420', '2025-04-15 13:00:00', '2025-04-15 20:00:00');
+INSERT INTO Flights VALUES ('FL117', 'R027', 'AP018', 'HNL-LAX-0705', '2025-05-30 06:00:00', '2025-05-30 14:30:00');
+INSERT INTO Flights VALUES ('FL118', 'R028', 'AP019', 'LAX-DEN-1210', '2025-06-15 10:00:00', '2025-06-15 12:30:00');
+INSERT INTO Flights VALUES ('FL119', 'R029', 'AP020', 'DEN-NY-2000', '2025-07-20 18:00:00', '2025-07-20 22:00:00');
+INSERT INTO Flights VALUES ('FL120', 'R030', 'AP021', 'NY-MIA-0930', '2025-08-25 08:00:00', '2025-08-25 11:00:00');
+
+
+
+
+-- this is bridge table
+INSERT INTO Workloads VALUES ('WL001', 'S001', 'FL001', 'Pilot', '2023-09-10', '2023-09-10 09:00:00', '2023-09-10 16:00:00', 7);
+INSERT INTO Workloads VALUES ('WL002', 'S002', 'FL001', 'Co-Pilot', '2023-09-10', '2023-09-10 09:00:00', '2023-09-10 16:00:00', 7);
+INSERT INTO Workloads VALUES ('WL003', 'S003', 'FL001', 'Flight Attendant', '2023-09-10', '2023-09-10 09:00:00', '2023-09-10 16:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL004', 'S004', 'FL002', 'Mechanic', '2023-09-11', '2023-09-11 07:00:00', '2023-09-11 09:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL005', 'S005', 'FL002', 'Ground Staff', '2023-09-11', '2023-09-11 06:00:00', '2023-09-11 09:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL006', 'S006', 'FL003', 'Security', '2023-09-12', '2023-09-12 10:00:00', '2023-09-12 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL007', 'S007', 'FL003', 'Engineer', '2023-09-12', '2023-09-12 10:00:00', '2023-09-12 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL008', 'S008', 'FL004', 'Cleaner', '2023-09-13', '2023-09-13 05:00:00', '2023-09-13 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL009', 'S009', 'FL005', 'Baggage Handler', '2023-09-14', '2023-09-14 08:00:00', '2023-09-14 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL010', 'S010', 'FL005', 'Catering', '2023-09-14', '2023-09-14 08:00:00', '2023-09-14 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL011', 'S001', 'FL006', 'Pilot', '2023-09-15', '2023-09-15 09:00:00', '2023-09-15 16:00:00', 7);
+INSERT INTO Workloads VALUES ('WL012', 'S002', 'FL006', 'Co-Pilot', '2023-09-15', '2023-09-15 09:00:00', '2023-09-15 16:00:00', 7);
+INSERT INTO Workloads VALUES ('WL013', 'S003', 'FL007', 'Flight Attendant', '2023-09-16', '2023-09-16 10:00:00', '2023-09-16 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL014', 'S004', 'FL007', 'Mechanic', '2023-09-16', '2023-09-16 07:00:00', '2023-09-16 09:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL015', 'S005', 'FL008', 'Ground Staff', '2023-09-17', '2023-09-17 06:00:00', '2023-09-17 09:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL016', 'S006', 'FL008', 'Security', '2023-09-17', '2023-09-17 10:00:00', '2023-09-17 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL017', 'S007', 'FL009', 'Engineer', '2023-09-18', '2023-09-18 06:00:00', '2023-09-18 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL018', 'S008', 'FL009', 'Cleaner', '2023-09-18', '2023-09-18 05:00:00', '2023-09-18 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL019', 'S009', 'FL010', 'Baggage Handler', '2023-09-19', '2023-09-19 05:00:00', '2023-09-19 06:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL020', 'S010', 'FL010', 'Catering', '2023-09-19', '2023-09-19 05:00:00', '2023-09-19 06:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL021', 'S001', 'FL011', 'Pilot', '2023-09-20', '2023-09-20 08:00:00', '2023-09-20 12:00:00', 4);
+INSERT INTO Workloads VALUES ('WL022', 'S002', 'FL011', 'Co-Pilot', '2023-09-20', '2023-09-20 08:00:00', '2023-09-20 12:00:00', 4);
+INSERT INTO Workloads VALUES ('WL023', 'S003', 'FL012', 'Flight Attendant', '2023-09-21', '2023-09-21 09:00:00', '2023-09-21 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL024', 'S004', 'FL012', 'Mechanic', '2023-09-21', '2023-09-21 06:00:00', '2023-09-21 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL025', 'S005', 'FL013', 'Ground Staff', '2023-09-22', '2023-09-22 07:00:00', '2023-09-22 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL026', 'S006', 'FL013', 'Security', '2023-09-22', '2023-09-22 11:00:00', '2023-09-22 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL027', 'S007', 'FL014', 'Engineer', '2023-09-23', '2023-09-23 09:00:00', '2023-09-23 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL028', 'S008', 'FL014', 'Cleaner', '2023-09-23', '2023-09-23 05:00:00', '2023-09-23 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL029', 'S009', 'FL015', 'Baggage Handler', '2023-09-24', '2023-09-24 06:00:00', '2023-09-24 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL030', 'S010', 'FL015', 'Catering', '2023-09-24', '2023-09-24 07:00:00', '2023-09-24 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL031', 'S001', 'FL016', 'Pilot', '2023-09-25', '2023-09-25 10:00:00', '2023-09-25 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL032', 'S002', 'FL016', 'Co-Pilot', '2023-09-25', '2023-09-25 10:00:00', '2023-09-25 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL033', 'S003', 'FL017', 'Flight Attendant', '2023-09-26', '2023-09-26 09:00:00', '2023-09-26 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL034', 'S004', 'FL017', 'Mechanic', '2023-09-26', '2023-09-26 06:00:00', '2023-09-26 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL035', 'S005', 'FL018', 'Ground Staff', '2023-09-27', '2023-09-27 07:00:00', '2023-09-27 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL036', 'S006', 'FL018', 'Security', '2023-09-27', '2023-09-27 11:00:00', '2023-09-27 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL037', 'S007', 'FL019', 'Engineer', '2023-09-28', '2023-09-28 09:00:00', '2023-09-28 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL038', 'S008', 'FL019', 'Cleaner', '2023-09-28', '2023-09-28 05:00:00', '2023-09-28 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL039', 'S009', 'FL020', 'Baggage Handler', '2023-09-29', '2023-09-29 06:00:00', '2023-09-29 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL040', 'S010', 'FL020', 'Catering', '2023-09-29', '2023-09-29 07:00:00', '2023-09-29 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL041', 'S001', 'FL021', 'Pilot', '2023-09-30', '2023-09-30 10:00:00', '2023-09-30 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL042', 'S002', 'FL021', 'Co-Pilot', '2023-09-30', '2023-09-30 10:00:00', '2023-09-30 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL043', 'S003', 'FL022', 'Flight Attendant', '2023-10-01', '2023-10-01 09:00:00', '2023-10-01 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL044', 'S004', 'FL022', 'Mechanic', '2023-10-01', '2023-10-01 06:00:00', '2023-10-01 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL045', 'S005', 'FL023', 'Ground Staff', '2023-10-02', '2023-10-02 07:00:00', '2023-10-02 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL046', 'S006', 'FL023', 'Security', '2023-10-02', '2023-10-02 11:00:00', '2023-10-02 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL047', 'S007', 'FL024', 'Engineer', '2023-10-03', '2023-10-03 09:00:00', '2023-10-03 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL048', 'S008', 'FL024', 'Cleaner', '2023-10-03', '2023-10-03 05:00:00', '2023-10-03 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL049', 'S009', 'FL025', 'Baggage Handler', '2023-10-04', '2023-10-04 06:00:00', '2023-10-04 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL050', 'S010', 'FL025', 'Catering', '2023-10-04', '2023-10-04 07:00:00', '2023-10-04 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL051', 'S001', 'FL026', 'Pilot', '2023-10-05', '2023-10-05 10:00:00', '2023-10-05 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL052', 'S002', 'FL026', 'Co-Pilot', '2023-10-05', '2023-10-05 10:00:00', '2023-10-05 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL053', 'S003', 'FL027', 'Flight Attendant', '2023-10-06', '2023-10-06 09:00:00', '2023-10-06 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL054', 'S004', 'FL027', 'Mechanic', '2023-10-06', '2023-10-06 06:00:00', '2023-10-06 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL055', 'S005', 'FL028', 'Ground Staff', '2023-10-07', '2023-10-07 07:00:00', '2023-10-07 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL056', 'S006', 'FL028', 'Security', '2023-10-07', '2023-10-07 11:00:00', '2023-10-07 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL057', 'S007', 'FL029', 'Engineer', '2023-10-08', '2023-10-08 09:00:00', '2023-10-08 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL058', 'S008', 'FL029', 'Cleaner', '2023-10-08', '2023-10-08 05:00:00', '2023-10-08 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL059', 'S009', 'FL030', 'Baggage Handler', '2023-10-09', '2023-10-09 06:00:00', '2023-10-09 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL060', 'S010', 'FL030', 'Catering', '2023-10-09', '2023-10-09 07:00:00', '2023-10-09 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL061', 'S001', 'FL031', 'Pilot', '2023-10-10', '2023-10-10 08:00:00', '2023-10-10 12:00:00', 4);
+INSERT INTO Workloads VALUES ('WL062', 'S002', 'FL031', 'Co-Pilot', '2023-10-10', '2023-10-10 08:00:00', '2023-10-10 12:00:00', 4);
+INSERT INTO Workloads VALUES ('WL063', 'S003', 'FL032', 'Flight Attendant', '2023-10-11', '2023-10-11 09:00:00', '2023-10-11 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL064', 'S004', 'FL032', 'Mechanic', '2023-10-11', '2023-10-11 06:00:00', '2023-10-11 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL065', 'S005', 'FL033', 'Ground Staff', '2023-10-12', '2023-10-12 07:00:00', '2023-10-12 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL066', 'S006', 'FL033', 'Security', '2023-10-12', '2023-10-12 11:00:00', '2023-10-12 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL067', 'S007', 'FL034', 'Engineer', '2023-10-13', '2023-10-13 09:00:00', '2023-10-13 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL068', 'S008', 'FL034', 'Cleaner', '2023-10-13', '2023-10-13 05:00:00', '2023-10-13 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL069', 'S009', 'FL035', 'Baggage Handler', '2023-10-14', '2023-10-14 06:00:00', '2023-10-14 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL070', 'S010', 'FL035', 'Catering', '2023-10-14', '2023-10-14 07:00:00', '2023-10-14 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL071', 'S001', 'FL036', 'Pilot', '2023-10-15', '2023-10-15 10:00:00', '2023-10-15 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL072', 'S002', 'FL036', 'Co-Pilot', '2023-10-15', '2023-10-15 10:00:00', '2023-10-15 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL073', 'S003', 'FL037', 'Flight Attendant', '2023-10-16', '2023-10-16 09:00:00', '2023-10-16 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL074', 'S004', 'FL037', 'Mechanic', '2023-10-16', '2023-10-16 06:00:00', '2023-10-16 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL075', 'S005', 'FL038', 'Ground Staff', '2023-10-17', '2023-10-17 07:00:00', '2023-10-17 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL076', 'S006', 'FL038', 'Security', '2023-10-17', '2023-10-17 11:00:00', '2023-10-17 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL077', 'S007', 'FL039', 'Engineer', '2023-10-18', '2023-10-18 09:00:00', '2023-10-18 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL078', 'S008', 'FL039', 'Cleaner', '2023-10-18', '2023-10-18 05:00:00', '2023-10-18 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL079', 'S009', 'FL040', 'Baggage Handler', '2023-10-19', '2023-10-19 06:00:00', '2023-10-19 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL080', 'S010', 'FL040', 'Catering', '2023-10-19', '2023-10-19 07:00:00', '2023-10-19 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL081', 'S001', 'FL041', 'Pilot', '2023-10-20', '2023-10-20 10:00:00', '2023-10-20 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL082', 'S002', 'FL041', 'Co-Pilot', '2023-10-20', '2023-10-20 10:00:00', '2023-10-20 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL083', 'S003', 'FL042', 'Flight Attendant', '2023-10-21', '2023-10-21 09:00:00', '2023-10-21 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL084', 'S004', 'FL042', 'Mechanic', '2023-10-21', '2023-10-21 06:00:00', '2023-10-21 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL085', 'S005', 'FL043', 'Ground Staff', '2023-10-22', '2023-10-22 07:00:00', '2023-10-22 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL086', 'S006', 'FL043', 'Security', '2023-10-22', '2023-10-22 11:00:00', '2023-10-22 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL087', 'S007', 'FL044', 'Engineer', '2023-10-23', '2023-10-23 09:00:00', '2023-10-23 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL088', 'S008', 'FL044', 'Cleaner', '2023-10-23', '2023-10-23 05:00:00', '2023-10-23 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL089', 'S009', 'FL045', 'Baggage Handler', '2023-10-24', '2023-10-24 06:00:00', '2023-10-24 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL090', 'S010', 'FL045', 'Catering', '2023-10-24', '2023-10-24 07:00:00', '2023-10-24 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL091', 'S001', 'FL046', 'Pilot', '2023-10-25', '2023-10-25 10:00:00', '2023-10-25 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL092', 'S002', 'FL046', 'Co-Pilot', '2023-10-25', '2023-10-25 10:00:00', '2023-10-25 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL093', 'S003', 'FL047', 'Flight Attendant', '2023-10-26', '2023-10-26 09:00:00', '2023-10-26 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL094', 'S004', 'FL047', 'Mechanic', '2023-10-26', '2023-10-26 06:00:00', '2023-10-26 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL095', 'S005', 'FL048', 'Ground Staff', '2023-10-27', '2023-10-27 07:00:00', '2023-10-27 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL096', 'S006', 'FL048', 'Security', '2023-10-27', '2023-10-27 11:00:00', '2023-10-27 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL097', 'S007', 'FL049', 'Engineer', '2023-10-28', '2023-10-28 09:00:00', '2023-10-28 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL098', 'S008', 'FL049', 'Cleaner', '2023-10-28', '2023-10-28 05:00:00', '2023-10-28 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL099', 'S009', 'FL050', 'Baggage Handler', '2023-10-29', '2023-10-29 06:00:00', '2023-10-29 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL100', 'S010', 'FL050', 'Catering', '2023-10-29', '2023-10-29 07:00:00', '2023-10-29 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL101', 'S001', 'FL051', 'Pilot', '2023-10-30', '2023-10-30 10:00:00', '2023-10-30 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL102', 'S002', 'FL051', 'Co-Pilot', '2023-10-30', '2023-10-30 10:00:00', '2023-10-30 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL103', 'S003', 'FL052', 'Flight Attendant', '2023-10-31', '2023-10-31 09:00:00', '2023-10-31 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL104', 'S004', 'FL052', 'Mechanic', '2023-10-31', '2023-10-31 06:00:00', '2023-10-31 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL105', 'S005', 'FL053', 'Ground Staff', '2023-11-01', '2023-11-01 07:00:00', '2023-11-01 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL106', 'S006', 'FL053', 'Security', '2023-11-01', '2023-11-01 11:00:00', '2023-11-01 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL107', 'S007', 'FL054', 'Engineer', '2023-11-02', '2023-11-02 09:00:00', '2023-11-02 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL108', 'S008', 'FL054', 'Cleaner', '2023-11-02', '2023-11-02 05:00:00', '2023-11-02 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL109', 'S009', 'FL055', 'Baggage Handler', '2023-11-03', '2023-11-03 06:00:00', '2023-11-03 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL110', 'S010', 'FL055', 'Catering', '2023-11-03', '2023-11-03 07:00:00', '2023-11-03 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL111', 'S001', 'FL056', 'Pilot', '2023-11-04', '2023-11-04 10:00:00', '2023-11-04 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL112', 'S002', 'FL056', 'Co-Pilot', '2023-11-04', '2023-11-04 10:00:00', '2023-11-04 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL113', 'S003', 'FL057', 'Flight Attendant', '2023-11-05', '2023-11-05 09:00:00', '2023-11-05 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL114', 'S004', 'FL057', 'Mechanic', '2023-11-05', '2023-11-05 06:00:00', '2023-11-05 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL115', 'S005', 'FL058', 'Ground Staff', '2023-11-06', '2023-11-06 07:00:00', '2023-11-06 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL116', 'S006', 'FL058', 'Security', '2023-11-06', '2023-11-06 11:00:00', '2023-11-06 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL117', 'S007', 'FL059', 'Engineer', '2023-11-07', '2023-11-07 09:00:00', '2023-11-07 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL118', 'S008', 'FL059', 'Cleaner', '2023-11-07', '2023-11-07 05:00:00', '2023-11-07 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL119', 'S009', 'FL060', 'Baggage Handler', '2023-11-08', '2023-11-08 06:00:00', '2023-11-08 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL120', 'S010', 'FL060', 'Catering', '2023-11-08', '2023-11-08 07:00:00', '2023-11-08 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL121', 'S001', 'FL061', 'Pilot', '2023-11-09', '2023-11-09 10:00:00', '2023-11-09 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL122', 'S002', 'FL061', 'Co-Pilot', '2023-11-09', '2023-11-09 10:00:00', '2023-11-09 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL123', 'S003', 'FL062', 'Flight Attendant', '2023-11-10', '2023-11-10 09:00:00', '2023-11-10 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL124', 'S004', 'FL062', 'Mechanic', '2023-11-10', '2023-11-10 06:00:00', '2023-11-10 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL125', 'S005', 'FL063', 'Ground Staff', '2023-11-11', '2023-11-11 07:00:00', '2023-11-11 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL126', 'S006', 'FL063', 'Security', '2023-11-11', '2023-11-11 11:00:00', '2023-11-11 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL127', 'S007', 'FL064', 'Engineer', '2023-11-12', '2023-11-12 09:00:00', '2023-11-12 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL128', 'S008', 'FL064', 'Cleaner', '2023-11-12', '2023-11-12 05:00:00', '2023-11-12 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL129', 'S009', 'FL065', 'Baggage Handler', '2023-11-13', '2023-11-13 06:00:00', '2023-11-13 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL130', 'S010', 'FL065', 'Catering', '2023-11-13', '2023-11-13 07:00:00', '2023-11-13 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL131', 'S001', 'FL066', 'Pilot', '2023-11-14', '2023-11-14 10:00:00', '2023-11-14 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL132', 'S002', 'FL066', 'Co-Pilot', '2023-11-14', '2023-11-14 10:00:00', '2023-11-14 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL133', 'S003', 'FL067', 'Flight Attendant', '2023-11-15', '2023-11-15 09:00:00', '2023-11-15 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL134', 'S004', 'FL067', 'Mechanic', '2023-11-15', '2023-11-15 06:00:00', '2023-11-15 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL135', 'S005', 'FL068', 'Ground Staff', '2023-11-16', '2023-11-16 07:00:00', '2023-11-16 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL136', 'S006', 'FL068', 'Security', '2023-11-16', '2023-11-16 11:00:00', '2023-11-16 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL137', 'S007', 'FL069', 'Engineer', '2023-11-17', '2023-11-17 09:00:00', '2023-11-17 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL138', 'S008', 'FL069', 'Cleaner', '2023-11-17', '2023-11-17 05:00:00', '2023-11-17 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL139', 'S009', 'FL070', 'Baggage Handler', '2023-11-18', '2023-11-18 06:00:00', '2023-11-18 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL140', 'S010', 'FL070', 'Catering', '2023-11-18', '2023-11-18 07:00:00', '2023-11-18 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL141', 'S001', 'FL071', 'Pilot', '2023-11-19', '2023-11-19 10:00:00', '2023-11-19 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL142', 'S002', 'FL071', 'Co-Pilot', '2023-11-19', '2023-11-19 10:00:00', '2023-11-19 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL143', 'S003', 'FL072', 'Flight Attendant', '2023-11-20', '2023-11-20 09:00:00', '2023-11-20 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL144', 'S004', 'FL072', 'Mechanic', '2023-11-20', '2023-11-20 06:00:00', '2023-11-20 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL145', 'S005', 'FL073', 'Ground Staff', '2023-11-21', '2023-11-21 07:00:00', '2023-11-21 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL146', 'S006', 'FL073', 'Security', '2023-11-21', '2023-11-21 11:00:00', '2023-11-21 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL147', 'S007', 'FL074', 'Engineer', '2023-11-22', '2023-11-22 09:00:00', '2023-11-22 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL148', 'S008', 'FL074', 'Cleaner', '2023-11-22', '2023-11-22 05:00:00', '2023-11-22 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL149', 'S009', 'FL075', 'Baggage Handler', '2023-11-23', '2023-11-23 06:00:00', '2023-11-23 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL150', 'S010', 'FL075', 'Catering', '2023-11-23', '2023-11-23 07:00:00', '2023-11-23 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL151', 'S001', 'FL076', 'Pilot', '2023-11-24', '2023-11-24 10:00:00', '2023-11-24 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL152', 'S002', 'FL076', 'Co-Pilot', '2023-11-24', '2023-11-24 10:00:00', '2023-11-24 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL153', 'S003', 'FL077', 'Flight Attendant', '2023-11-25', '2023-11-25 09:00:00', '2023-11-25 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL154', 'S004', 'FL077', 'Mechanic', '2023-11-25', '2023-11-25 06:00:00', '2023-11-25 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL155', 'S005', 'FL078', 'Ground Staff', '2023-11-26', '2023-11-26 07:00:00', '2023-11-26 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL156', 'S006', 'FL078', 'Security', '2023-11-26', '2023-11-26 11:00:00', '2023-11-26 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL157', 'S007', 'FL079', 'Engineer', '2023-11-27', '2023-11-27 09:00:00', '2023-11-27 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL158', 'S008', 'FL079', 'Cleaner', '2023-11-27', '2023-11-27 05:00:00', '2023-11-27 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL159', 'S009', 'FL080', 'Baggage Handler', '2023-11-28', '2023-11-28 06:00:00', '2023-11-28 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL160', 'S010', 'FL080', 'Catering', '2023-11-28', '2023-11-28 07:00:00', '2023-11-28 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL161', 'S001', 'FL081', 'Pilot', '2023-11-29', '2023-11-29 10:00:00', '2023-11-29 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL162', 'S002', 'FL081', 'Co-Pilot', '2023-11-29', '2023-11-29 10:00:00', '2023-11-29 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL163', 'S003', 'FL082', 'Flight Attendant', '2023-11-30', '2023-11-30 09:00:00', '2023-11-30 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL164', 'S004', 'FL082', 'Mechanic', '2023-11-30', '2023-11-30 06:00:00', '2023-11-30 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL165', 'S005', 'FL083', 'Ground Staff', '2023-12-01', '2023-12-01 07:00:00', '2023-12-01 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL166', 'S006', 'FL083', 'Security', '2023-12-01', '2023-12-01 11:00:00', '2023-12-01 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL167', 'S007', 'FL084', 'Engineer', '2023-12-02', '2023-12-02 09:00:00', '2023-12-02 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL168', 'S008', 'FL084', 'Cleaner', '2023-12-02', '2023-12-02 05:00:00', '2023-12-02 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL169', 'S009', 'FL085', 'Baggage Handler', '2023-12-03', '2023-12-03 06:00:00', '2023-12-03 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL170', 'S010', 'FL085', 'Catering', '2023-12-03', '2023-12-03 07:00:00', '2023-12-03 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL171', 'S001', 'FL086', 'Pilot', '2023-12-04', '2023-12-04 10:00:00', '2023-12-04 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL172', 'S002', 'FL086', 'Co-Pilot', '2023-12-04', '2023-12-04 10:00:00', '2023-12-04 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL173', 'S003', 'FL087', 'Flight Attendant', '2023-12-05', '2023-12-05 09:00:00', '2023-12-05 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL174', 'S004', 'FL087', 'Mechanic', '2023-12-05', '2023-12-05 06:00:00', '2023-12-05 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL175', 'S005', 'FL088', 'Ground Staff', '2023-12-06', '2023-12-06 07:00:00', '2023-12-06 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL176', 'S006', 'FL088', 'Security', '2023-12-06', '2023-12-06 11:00:00', '2023-12-06 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL177', 'S007', 'FL089', 'Engineer', '2023-12-07', '2023-12-07 09:00:00', '2023-12-07 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL178', 'S008', 'FL089', 'Cleaner', '2023-12-07', '2023-12-07 05:00:00', '2023-12-07 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL179', 'S009', 'FL090', 'Baggage Handler', '2023-12-08', '2023-12-08 06:00:00', '2023-12-08 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL180', 'S010', 'FL090', 'Catering', '2023-12-08', '2023-12-08 07:00:00', '2023-12-08 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL181', 'S001', 'FL091', 'Pilot', '2023-12-09', '2023-12-09 10:00:00', '2023-12-09 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL182', 'S002', 'FL091', 'Co-Pilot', '2023-12-09', '2023-12-09 10:00:00', '2023-12-09 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL183', 'S003', 'FL092', 'Flight Attendant', '2023-12-10', '2023-12-10 09:00:00', '2023-12-10 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL184', 'S004', 'FL092', 'Mechanic', '2023-12-10', '2023-12-10 06:00:00', '2023-12-10 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL185', 'S005', 'FL093', 'Ground Staff', '2023-12-11', '2023-12-11 07:00:00', '2023-12-11 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL186', 'S006', 'FL093', 'Security', '2023-12-11', '2023-12-11 11:00:00', '2023-12-11 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL187', 'S007', 'FL094', 'Engineer', '2023-12-12', '2023-12-12 09:00:00', '2023-12-12 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL188', 'S008', 'FL094', 'Cleaner', '2023-12-12', '2023-12-12 05:00:00', '2023-12-12 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL189', 'S009', 'FL095', 'Baggage Handler', '2023-12-13', '2023-12-13 06:00:00', '2023-12-13 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL190', 'S010', 'FL095', 'Catering', '2023-12-13', '2023-12-13 07:00:00', '2023-12-13 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL191', 'S001', 'FL096', 'Pilot', '2023-12-14', '2023-12-14 10:00:00', '2023-12-14 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL192', 'S002', 'FL096', 'Co-Pilot', '2023-12-14', '2023-12-14 10:00:00', '2023-12-14 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL193', 'S003', 'FL097', 'Flight Attendant', '2023-12-15', '2023-12-15 09:00:00', '2023-12-15 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL194', 'S004', 'FL097', 'Mechanic', '2023-12-15', '2023-12-15 06:00:00', '2023-12-15 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL195', 'S005', 'FL098', 'Ground Staff', '2023-12-16', '2023-12-16 07:00:00', '2023-12-16 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL196', 'S006', 'FL098', 'Security', '2023-12-16', '2023-12-16 11:00:00', '2023-12-16 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL197', 'S007', 'FL099', 'Engineer', '2023-12-17', '2023-12-17 09:00:00', '2023-12-17 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL198', 'S008', 'FL099', 'Cleaner', '2023-12-17', '2023-12-17 05:00:00', '2023-12-17 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL199', 'S009', 'FL100', 'Baggage Handler', '2023-12-18', '2023-12-18 06:00:00', '2023-12-18 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL200', 'S010', 'FL100', 'Catering', '2023-12-18', '2023-12-18 07:00:00', '2023-12-18 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL201', 'S001', 'FL001', 'Pilot', '2023-12-19', '2023-12-19 10:00:00', '2023-12-19 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL202', 'S002', 'FL001', 'Co-Pilot', '2023-12-19', '2023-12-19 10:00:00', '2023-12-19 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL203', 'S003', 'FL002', 'Flight Attendant', '2023-12-20', '2023-12-20 09:00:00', '2023-12-20 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL204', 'S004', 'FL002', 'Mechanic', '2023-12-20', '2023-12-20 06:00:00', '2023-12-20 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL205', 'S005', 'FL003', 'Ground Staff', '2023-12-21', '2023-12-21 07:00:00', '2023-12-21 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL206', 'S006', 'FL003', 'Security', '2023-12-21', '2023-12-21 11:00:00', '2023-12-21 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL207', 'S007', 'FL004', 'Engineer', '2023-12-22', '2023-12-22 09:00:00', '2023-12-22 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL208', 'S008', 'FL004', 'Cleaner', '2023-12-22', '2023-12-22 05:00:00', '2023-12-22 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL209', 'S009', 'FL005', 'Baggage Handler', '2023-12-23', '2023-12-23 06:00:00', '2023-12-23 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL210', 'S010', 'FL005', 'Catering', '2023-12-23', '2023-12-23 07:00:00', '2023-12-23 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL211', 'S001', 'FL006', 'Pilot', '2023-12-24', '2023-12-24 10:00:00', '2023-12-24 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL212', 'S002', 'FL006', 'Co-Pilot', '2023-12-24', '2023-12-24 10:00:00', '2023-12-24 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL213', 'S003', 'FL007', 'Flight Attendant', '2023-12-25', '2023-12-25 09:00:00', '2023-12-25 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL214', 'S004', 'FL007', 'Mechanic', '2023-12-25', '2023-12-25 06:00:00', '2023-12-25 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL215', 'S005', 'FL008', 'Ground Staff', '2023-12-26', '2023-12-26 07:00:00', '2023-12-26 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL216', 'S006', 'FL008', 'Security', '2023-12-26', '2023-12-26 11:00:00', '2023-12-26 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL217', 'S007', 'FL009', 'Engineer', '2023-12-27', '2023-12-27 09:00:00', '2023-12-27 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL218', 'S008', 'FL009', 'Cleaner', '2023-12-27', '2023-12-27 05:00:00', '2023-12-27 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL219', 'S009', 'FL010', 'Baggage Handler', '2023-12-28', '2023-12-28 06:00:00', '2023-12-28 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL220', 'S010', 'FL010', 'Catering', '2023-12-28', '2023-12-28 07:00:00', '2023-12-28 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL221', 'S001', 'FL011', 'Pilot', '2023-12-29', '2023-12-29 10:00:00', '2023-12-29 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL222', 'S002', 'FL011', 'Co-Pilot', '2023-12-29', '2023-12-29 10:00:00', '2023-12-29 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL223', 'S003', 'FL012', 'Flight Attendant', '2023-12-30', '2023-12-30 09:00:00', '2023-12-30 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL224', 'S004', 'FL012', 'Mechanic', '2023-12-30', '2023-12-30 06:00:00', '2023-12-30 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL225', 'S005', 'FL013', 'Ground Staff', '2023-12-31', '2023-12-31 07:00:00', '2023-12-31 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL226', 'S006', 'FL013', 'Security', '2023-12-31', '2023-12-31 11:00:00', '2023-12-31 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL227', 'S007', 'FL014', 'Engineer', '2024-01-01', '2024-01-01 09:00:00', '2024-01-01 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL228', 'S008', 'FL014', 'Cleaner', '2024-01-01', '2024-01-01 05:00:00', '2024-01-01 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL229', 'S009', 'FL015', 'Baggage Handler', '2024-01-02', '2024-01-02 06:00:00', '2024-01-02 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL230', 'S010', 'FL015', 'Catering', '2024-01-02', '2024-01-02 07:00:00', '2024-01-02 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL231', 'S001', 'FL016', 'Pilot', '2024-01-03', '2024-01-03 10:00:00', '2024-01-03 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL232', 'S002', 'FL016', 'Co-Pilot', '2024-01-03', '2024-01-03 10:00:00', '2024-01-03 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL233', 'S003', 'FL017', 'Flight Attendant', '2024-01-04', '2024-01-04 09:00:00', '2024-01-04 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL234', 'S004', 'FL017', 'Mechanic', '2024-01-04', '2024-01-04 06:00:00', '2024-01-04 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL235', 'S005', 'FL018', 'Ground Staff', '2024-01-05', '2024-01-05 07:00:00', '2024-01-05 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL236', 'S006', 'FL018', 'Security', '2024-01-05', '2024-01-05 11:00:00', '2024-01-05 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL237', 'S007', 'FL019', 'Engineer', '2024-01-06', '2024-01-06 09:00:00', '2024-01-06 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL238', 'S008', 'FL019', 'Cleaner', '2024-01-06', '2024-01-06 05:00:00', '2024-01-06 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL239', 'S009', 'FL020', 'Baggage Handler', '2024-01-07', '2024-01-07 06:00:00', '2024-01-07 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL240', 'S010', 'FL020', 'Catering', '2024-01-07', '2024-01-07 07:00:00', '2024-01-07 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL241', 'S001', 'FL021', 'Pilot', '2024-01-08', '2024-01-08 10:00:00', '2024-01-08 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL242', 'S002', 'FL021', 'Co-Pilot', '2024-01-08', '2024-01-08 10:00:00', '2024-01-08 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL243', 'S003', 'FL022', 'Flight Attendant', '2024-01-09', '2024-01-09 09:00:00', '2024-01-09 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL244', 'S004', 'FL022', 'Mechanic', '2024-01-09', '2024-01-09 06:00:00', '2024-01-09 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL245', 'S005', 'FL023', 'Ground Staff', '2024-01-10', '2024-01-10 07:00:00', '2024-01-10 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL246', 'S006', 'FL023', 'Security', '2024-01-10', '2024-01-10 11:00:00', '2024-01-10 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL247', 'S007', 'FL024', 'Engineer', '2024-01-11', '2024-01-11 09:00:00', '2024-01-11 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL248', 'S008', 'FL024', 'Cleaner', '2024-01-11', '2024-01-11 05:00:00', '2024-01-11 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL249', 'S009', 'FL025', 'Baggage Handler', '2024-01-12', '2024-01-12 06:00:00', '2024-01-12 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL250', 'S010', 'FL025', 'Catering', '2024-01-12', '2024-01-12 07:00:00', '2024-01-12 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL251', 'S001', 'FL026', 'Pilot', '2024-01-13', '2024-01-13 10:00:00', '2024-01-13 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL252', 'S002', 'FL026', 'Co-Pilot', '2024-01-13', '2024-01-13 10:00:00', '2024-01-13 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL253', 'S003', 'FL027', 'Flight Attendant', '2024-01-14', '2024-01-14 09:00:00', '2024-01-14 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL254', 'S004', 'FL027', 'Mechanic', '2024-01-14', '2024-01-14 06:00:00', '2024-01-14 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL255', 'S005', 'FL028', 'Ground Staff', '2024-01-15', '2024-01-15 07:00:00', '2024-01-15 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL256', 'S006', 'FL028', 'Security', '2024-01-15', '2024-01-15 11:00:00', '2024-01-15 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL257', 'S007', 'FL029', 'Engineer', '2024-01-16', '2024-01-16 09:00:00', '2024-01-16 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL258', 'S008', 'FL029', 'Cleaner', '2024-01-16', '2024-01-16 05:00:00', '2024-01-16 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL259', 'S009', 'FL030', 'Baggage Handler', '2024-01-17', '2024-01-17 06:00:00', '2024-01-17 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL260', 'S010', 'FL030', 'Catering', '2024-01-17', '2024-01-17 07:00:00', '2024-01-17 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL261', 'S001', 'FL031', 'Pilot', '2024-01-18', '2024-01-18 10:00:00', '2024-01-18 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL262', 'S002', 'FL031', 'Co-Pilot', '2024-01-18', '2024-01-18 10:00:00', '2024-01-18 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL263', 'S003', 'FL032', 'Flight Attendant', '2024-01-19', '2024-01-19 09:00:00', '2024-01-19 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL264', 'S004', 'FL032', 'Mechanic', '2024-01-19', '2024-01-19 06:00:00', '2024-01-19 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL265', 'S005', 'FL033', 'Ground Staff', '2024-01-20', '2024-01-20 07:00:00', '2024-01-20 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL266', 'S006', 'FL033', 'Security', '2024-01-20', '2024-01-20 11:00:00', '2024-01-20 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL267', 'S007', 'FL034', 'Engineer', '2024-01-21', '2024-01-21 09:00:00', '2024-01-21 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL268', 'S008', 'FL034', 'Cleaner', '2024-01-21', '2024-01-21 05:00:00', '2024-01-21 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL269', 'S009', 'FL035', 'Baggage Handler', '2024-01-22', '2024-01-22 06:00:00', '2024-01-22 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL270', 'S010', 'FL035', 'Catering', '2024-01-22', '2024-01-22 07:00:00', '2024-01-22 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL271', 'S001', 'FL036', 'Pilot', '2024-01-23', '2024-01-23 10:00:00', '2024-01-23 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL272', 'S002', 'FL036', 'Co-Pilot', '2024-01-23', '2024-01-23 10:00:00', '2024-01-23 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL273', 'S003', 'FL037', 'Flight Attendant', '2024-01-24', '2024-01-24 09:00:00', '2024-01-24 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL274', 'S004', 'FL037', 'Mechanic', '2024-01-24', '2024-01-24 06:00:00', '2024-01-24 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL275', 'S005', 'FL038', 'Ground Staff', '2024-01-25', '2024-01-25 07:00:00', '2024-01-25 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL276', 'S006', 'FL038', 'Security', '2024-01-25', '2024-01-25 11:00:00', '2024-01-25 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL277', 'S007', 'FL039', 'Engineer', '2024-01-26', '2024-01-26 09:00:00', '2024-01-26 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL278', 'S008', 'FL039', 'Cleaner', '2024-01-26', '2024-01-26 05:00:00', '2024-01-26 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL279', 'S009', 'FL040', 'Baggage Handler', '2024-01-27', '2024-01-27 06:00:00', '2024-01-27 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL280', 'S010', 'FL040', 'Catering', '2024-01-27', '2024-01-27 07:00:00', '2024-01-27 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL281', 'S001', 'FL041', 'Pilot', '2024-01-28', '2024-01-28 10:00:00', '2024-01-28 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL282', 'S002', 'FL041', 'Co-Pilot', '2024-01-28', '2024-01-28 10:00:00', '2024-01-28 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL283', 'S003', 'FL042', 'Flight Attendant', '2024-01-29', '2024-01-29 09:00:00', '2024-01-29 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL284', 'S004', 'FL042', 'Mechanic', '2024-01-29', '2024-01-29 06:00:00', '2024-01-29 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL285', 'S005', 'FL043', 'Ground Staff', '2024-01-30', '2024-01-30 07:00:00', '2024-01-30 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL286', 'S006', 'FL043', 'Security', '2024-01-30', '2024-01-30 11:00:00', '2024-01-30 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL287', 'S007', 'FL044', 'Engineer', '2024-01-31', '2024-01-31 09:00:00', '2024-01-31 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL288', 'S008', 'FL044', 'Cleaner', '2024-01-31', '2024-01-31 05:00:00', '2024-01-31 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL289', 'S009', 'FL045', 'Baggage Handler', '2024-02-01', '2024-02-01 06:00:00', '2024-02-01 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL290', 'S010', 'FL045', 'Catering', '2024-02-01', '2024-02-01 07:00:00', '2024-02-01 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL291', 'S001', 'FL046', 'Pilot', '2024-02-02', '2024-02-02 10:00:00', '2024-02-02 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL292', 'S002', 'FL046', 'Co-Pilot', '2024-02-02', '2024-02-02 10:00:00', '2024-02-02 14:00:00', 4);
+INSERT INTO Workloads VALUES ('WL293', 'S003', 'FL047', 'Flight Attendant', '2024-02-03', '2024-02-03 09:00:00', '2024-02-03 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL294', 'S004', 'FL047', 'Mechanic', '2024-02-03', '2024-02-03 06:00:00', '2024-02-03 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL295', 'S005', 'FL048', 'Ground Staff', '2024-02-04', '2024-02-04 07:00:00', '2024-02-04 10:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL296', 'S006', 'FL048', 'Security', '2024-02-04', '2024-02-04 11:00:00', '2024-02-04 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL297', 'S007', 'FL049', 'Engineer', '2024-02-05', '2024-02-05 09:00:00', '2024-02-05 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL298', 'S008', 'FL049', 'Cleaner', '2024-02-05', '2024-02-05 05:00:00', '2024-02-05 08:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL299', 'S009', 'FL050', 'Baggage Handler', '2024-02-06', '2024-02-06 06:00:00', '2024-02-06 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL300', 'S010', 'FL050', 'Catering', '2024-02-06', '2024-02-06 07:00:00', '2024-02-06 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL301', 'S011', 'FL051', 'Maintenance', '2024-01-15', '2024-01-15 08:00:00', '2024-01-15 16:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL302', 'S012', 'FL052', 'Security', '2024-01-22', '2024-01-22 10:00:00', '2024-01-22 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL303', 'S013', 'FL053', 'Customer Service', '2024-02-10', '2024-02-10 09:00:00', '2024-02-10 17:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL304', 'S014', 'FL054', 'Catering', '2024-03-01', '2024-03-01 06:00:00', '2024-03-01 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL305', 'S015', 'FL055', 'Flight Attendant', '2024-03-15', '2024-03-15 07:30:00', '2024-03-15 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL306', 'S016', 'FL056', 'Ground Operations', '2024-04-05', '2024-04-05 08:00:00', '2024-04-05 12:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL307', 'S017', 'FL057', 'Maintenance', '2024-04-20', '2024-04-20 10:00:00', '2024-04-20 18:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL308', 'S018', 'FL058', 'Security', '2024-05-01', '2024-05-01 11:00:00', '2024-05-01 15:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL309', 'S019', 'FL059', 'Customer Service', '2024-05-15', '2024-05-15 09:30:00', '2024-05-15 16:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL310', 'S020', 'FL060', 'Catering', '2024-06-01', '2024-06-01 07:00:00', '2024-06-01 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL311', 'S021', 'FL061', 'Flight Attendant', '2024-06-20', '2024-06-20 08:00:00', '2024-06-20 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL312', 'S022', 'FL062', 'Ground Operations', '2024-07-05', '2024-07-05 10:00:00', '2024-07-05 16:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL313', 'S023', 'FL063', 'Maintenance', '2024-07-20', '2024-07-20 08:30:00', '2024-07-20 17:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL314', 'S024', 'FL064', 'Security', '2024-08-10', '2024-08-10 11:00:00', '2024-08-10 15:30:00', NULL);
+INSERT INTO Workloads VALUES ('WL315', 'S025', 'FL065', 'Customer Service', '2024-08-25', '2024-08-25 09:00:00', '2024-08-25 16:30:00', NULL);
+INSERT INTO Workloads VALUES ('WL316', 'S026', 'FL066', 'Catering', '2024-09-10', '2024-09-10 07:00:00', '2024-09-10 13:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL317', 'S027', 'FL067', 'Flight Attendant', '2024-09-25', '2024-09-25 08:00:00', '2024-09-25 14:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL318', 'S028', 'FL068', 'Ground Operations', '2024-10-10', '2024-10-10 09:30:00', '2024-10-10 16:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL319', 'S029', 'FL069', 'Maintenance', '2024-10-25', '2024-10-25 08:00:00', '2024-10-25 17:00:00', NULL);
+INSERT INTO Workloads VALUES ('WL320', 'S030', 'FL070', 'Security', '2024-11-10', '2024-11-10 11:00:00', '2024-11-10 15:00:00', NULL);
+
+
+
+
+
+
+
+
+
+INSERT INTO Booking VALUES ('B001', 'PR001', 'M001', 1299.98, '2023-01-01');
+INSERT INTO Booking VALUES ('B002', 'PR002', 'M002', 1399.99, '2023-02-01');
+INSERT INTO Booking VALUES ('B003', 'PR003', 'M003', 199.99, '2023-03-01');
+INSERT INTO Booking VALUES ('B004', 'PR004', 'M004', 299.99, '2023-04-01');
+INSERT INTO Booking VALUES ('B005', 'PR005', 'M005', 149.99, '2023-05-01');
+INSERT INTO Booking VALUES ('B006', 'PR006', 'M006', 1799.98, '2023-06-01');
+INSERT INTO Booking VALUES ('B007', 'PR007', 'M007', 249.99, '2023-07-01');
+INSERT INTO Booking VALUES ('B008', 'PR008', 'M008', 499.98, '2023-08-01');
+INSERT INTO Booking VALUES ('B009', 'PR009', 'M009', 149.99, '2023-09-01');
+INSERT INTO Booking VALUES ('B010', 'PR010', 'M010', 1199.98, '2023-10-01');
+INSERT INTO Booking VALUES ('B011', 'PR011', 'M001', 1099.98, '2023-11-01');
+INSERT INTO Booking VALUES ('B012', 'PR012', 'M002', 1299.99, '2023-11-02');
+INSERT INTO Booking VALUES ('B013', 'PR013', 'M003', 179.99, '2023-11-03');
+INSERT INTO Booking VALUES ('B014', 'PR014', 'M004', 289.99, '2023-11-04');
+INSERT INTO Booking VALUES ('B015', 'PR015', 'M005', 139.99, '2023-11-05');
+INSERT INTO Booking VALUES ('B016', 'PR016', 'M006', 1699.98, '2023-11-06');
+INSERT INTO Booking VALUES ('B017', 'PR017', 'M007', 259.99, '2023-11-07');
+INSERT INTO Booking VALUES ('B018', 'PR018', 'M008', 549.98, '2023-11-08');
+INSERT INTO Booking VALUES ('B019', 'PR019', 'M009', 159.99, '2023-11-09');
+INSERT INTO Booking VALUES ('B020', 'PR020', 'M010', 1299.98, '2023-11-10');
+INSERT INTO Booking VALUES ('B021', 'PR021', 'M001', 1149.98, '2023-11-11');
+INSERT INTO Booking VALUES ('B022', 'PR022', 'M002', 1399.99, '2023-11-12');
+INSERT INTO Booking VALUES ('B023', 'PR023', 'M003', 209.99, '2023-11-13');
+INSERT INTO Booking VALUES ('B024', 'PR024', 'M004', 319.99, '2023-11-14');
+INSERT INTO Booking VALUES ('B025', 'PR025', 'M005', 159.99, '2023-11-15');
+INSERT INTO Booking VALUES ('B026', 'PR026', 'M006', 1799.98, '2023-11-16');
+INSERT INTO Booking VALUES ('B027', 'PR027', 'M007', 269.99, '2023-11-17');
+INSERT INTO Booking VALUES ('B028', 'PR028', 'M008', 559.98, '2023-11-18');
+INSERT INTO Booking VALUES ('B029', 'PR029', 'M009', 169.99, '2023-11-19');
+INSERT INTO Booking VALUES ('B030', 'PR030', 'M010', 1349.98, '2023-11-20');
+INSERT INTO Booking VALUES ('B031', 'PR031', 'M001', 1199.98, '2023-11-21');
+INSERT INTO Booking VALUES ('B032', 'PR032', 'M002', 1499.99, '2023-11-22');
+INSERT INTO Booking VALUES ('B033', 'PR033', 'M003', 219.99, '2023-11-23');
+INSERT INTO Booking VALUES ('B034', 'PR034', 'M004', 329.99, '2023-11-24');
+INSERT INTO Booking VALUES ('B035', 'PR035', 'M005', 169.99, '2023-11-25');
+INSERT INTO Booking VALUES ('B036', 'PR036', 'M006', 1899.98, '2023-11-26');
+INSERT INTO Booking VALUES ('B037', 'PR037', 'M007', 279.99, '2023-11-27');
+INSERT INTO Booking VALUES ('B038', 'PR038', 'M008', 569.98, '2023-11-28');
+INSERT INTO Booking VALUES ('B039', 'PR039', 'M009', 179.99, '2023-11-29');
+INSERT INTO Booking VALUES ('B040', 'PR040', 'M010', 1399.98, '2023-11-30');
+INSERT INTO Booking VALUES ('B041', 'PR041', 'M001', 1249.98, '2023-12-01');
+INSERT INTO Booking VALUES ('B042', 'PR042', 'M002', 1599.99, '2023-12-02');
+INSERT INTO Booking VALUES ('B043', 'PR043', 'M003', 229.99, '2023-12-03');
+INSERT INTO Booking VALUES ('B044', 'PR044', 'M004', 339.99, '2023-12-04');
+INSERT INTO Booking VALUES ('B045', 'PR045', 'M005', 179.99, '2023-12-05');
+INSERT INTO Booking VALUES ('B046', 'PR046', 'M006', 1999.98, '2023-12-06');
+INSERT INTO Booking VALUES ('B047', 'PR047', 'M007', 289.99, '2023-12-07');
+INSERT INTO Booking VALUES ('B048', 'PR048', 'M008', 579.98, '2023-12-08');
+INSERT INTO Booking VALUES ('B049', 'PR049', 'M009', 189.99, '2023-12-09');
+INSERT INTO Booking VALUES ('B050', 'PR050', 'M010', 1449.98, '2023-12-10');
+INSERT INTO Booking VALUES ('B051', 'PR051', 'M001', 1299.98, '2023-12-11');
+INSERT INTO Booking VALUES ('B052', 'PR052', 'M002', 1699.99, '2023-12-12');
+INSERT INTO Booking VALUES ('B053', 'PR053', 'M003', 239.99, '2023-12-13');
+INSERT INTO Booking VALUES ('B054', 'PR054', 'M004', 349.99, '2023-12-14');
+INSERT INTO Booking VALUES ('B055', 'PR055', 'M005', 189.99, '2023-12-15');
+INSERT INTO Booking VALUES ('B056', 'PR056', 'M006', 2099.98, '2023-12-16');
+INSERT INTO Booking VALUES ('B057', 'PR057', 'M007', 299.99, '2023-12-17');
+INSERT INTO Booking VALUES ('B058', 'PR058', 'M008', 589.98, '2023-12-18');
+INSERT INTO Booking VALUES ('B059', 'PR059', 'M009', 199.99, '2023-12-19');
+INSERT INTO Booking VALUES ('B060', 'PR060', 'M010', 1499.98, '2023-12-20');
+INSERT INTO Booking VALUES ('B061', 'PR061', 'M001', 1349.98, '2023-12-21');
+INSERT INTO Booking VALUES ('B062', 'PR062', 'M002', 1799.99, '2023-12-22');
+INSERT INTO Booking VALUES ('B063', 'PR063', 'M003', 249.99, '2023-12-23');
+INSERT INTO Booking VALUES ('B064', 'PR064', 'M004', 359.99, '2023-12-24');
+INSERT INTO Booking VALUES ('B065', 'PR065', 'M005', 199.99, '2023-12-25');
+INSERT INTO Booking VALUES ('B066', 'PR066', 'M006', 2199.98, '2023-12-26');
+INSERT INTO Booking VALUES ('B067', 'PR067', 'M007', 309.99, '2023-12-27');
+INSERT INTO Booking VALUES ('B068', 'PR068', 'M008', 599.98, '2023-12-28');
+INSERT INTO Booking VALUES ('B069', 'PR069', 'M009', 209.99, '2023-12-29');
+INSERT INTO Booking VALUES ('B070', 'PR070', 'M010', 1549.98, '2023-12-30');
+INSERT INTO Booking VALUES ('B071', 'PR071', 'M001', 1399.98, '2023-12-31');
+INSERT INTO Booking VALUES ('B072', 'PR072', 'M002', 1899.99, '2024-01-01');
+INSERT INTO Booking VALUES ('B073', 'PR073', 'M003', 259.99, '2024-01-02');
+INSERT INTO Booking VALUES ('B074', 'PR074', 'M004', 369.99, '2024-01-03');
+INSERT INTO Booking VALUES ('B075', 'PR075', 'M005', 209.99, '2024-01-04');
+INSERT INTO Booking VALUES ('B076', 'PR076', 'M006', 2299.98, '2024-01-05');
+INSERT INTO Booking VALUES ('B077', 'PR077', 'M007', 319.99, '2024-01-06');
+INSERT INTO Booking VALUES ('B078', 'PR078', 'M008', 609.98, '2024-01-07');
+INSERT INTO Booking VALUES ('B079', 'PR079', 'M009', 219.99, '2024-01-08');
+INSERT INTO Booking VALUES ('B080', 'PR080', 'M010', 1599.98, '2024-01-09');
+INSERT INTO Booking VALUES ('B081', 'PR081', 'M001', 1449.98, '2024-01-10');
+INSERT INTO Booking VALUES ('B082', 'PR082', 'M002', 1999.99, '2024-01-11');
+INSERT INTO Booking VALUES ('B083', 'PR083', 'M003', 269.99, '2024-01-12');
+INSERT INTO Booking VALUES ('B084', 'PR084', 'M004', 379.99, '2024-01-13');
+INSERT INTO Booking VALUES ('B085', 'PR085', 'M005', 219.99, '2024-01-14');
+INSERT INTO Booking VALUES ('B086', 'PR086', 'M006', 2399.98, '2024-01-15');
+INSERT INTO Booking VALUES ('B087', 'PR087', 'M007', 329.99, '2024-01-16');
+INSERT INTO Booking VALUES ('B088', 'PR088', 'M008', 619.98, '2024-01-17');
+INSERT INTO Booking VALUES ('B089', 'PR089', 'M009', 229.99, '2024-01-18');
+INSERT INTO Booking VALUES ('B090', 'PR090', 'M010', 1649.98, '2024-01-19');
+INSERT INTO Booking VALUES ('B091', 'PR091', 'M001', 1499.98, '2024-01-20');
+INSERT INTO Booking VALUES ('B092', 'PR092', 'M002', 2099.99, '2024-01-21');
+INSERT INTO Booking VALUES ('B093', 'PR093', 'M003', 279.99, '2024-01-22');
+INSERT INTO Booking VALUES ('B094', 'PR094', 'M004', 389.99, '2024-01-23');
+INSERT INTO Booking VALUES ('B095', 'PR095', 'M005', 229.99, '2024-01-24');
+INSERT INTO Booking VALUES ('B096', 'PR096', 'M006', 2499.98, '2024-01-25');
+INSERT INTO Booking VALUES ('B097', 'PR097', 'M007', 339.99, '2024-01-26');
+INSERT INTO Booking VALUES ('B098', 'PR098', 'M008', 629.98, '2024-01-27');
+INSERT INTO Booking VALUES ('B099', 'PR099', 'M009', 239.99, '2024-01-28');
+INSERT INTO Booking VALUES ('B100', 'PR100', 'M010', 1699.98, '2024-01-29');
+INSERT INTO Booking VALUES ('B101', 'PR101', 'M011', 2999.99, '2024-02-15');
+INSERT INTO Booking VALUES ('B102', 'PR102', 'M012', 4500.00, '2024-03-01');
+INSERT INTO Booking VALUES ('B103', 'PR103', 'M013', 1299.95, '2024-03-20');
+INSERT INTO Booking VALUES ('B104', 'PR104', 'M014', 3400.00, '2024-04-10');
+INSERT INTO Booking VALUES ('B105', 'PR105', 'M015', 2500.00, '2024-04-25');
+INSERT INTO Booking VALUES ('B106', 'PR106', 'M016', 1999.99, '2024-05-15');
+INSERT INTO Booking VALUES ('B107', 'PR107', 'M017', 3200.00, '2024-06-05');
+INSERT INTO Booking VALUES ('B108', 'PR108', 'M018', 2700.00, '2024-06-20');
+INSERT INTO Booking VALUES ('B109', 'PR109', 'M019', 4200.00, '2024-07-10');
+INSERT INTO Booking VALUES ('B110', 'PR110', 'M020', 3100.00, '2024-08-01');
+INSERT INTO Booking VALUES ('B111', 'PR111', 'M021', 1850.00, '2024-08-20');
+INSERT INTO Booking VALUES ('B112', 'PR112', 'M022', 1500.00, '2024-09-10');
+INSERT INTO Booking VALUES ('B113', 'PR113', 'M023', 2200.00, '2024-10-01');
+INSERT INTO Booking VALUES ('B114', 'PR114', 'M024', 3400.00, '2024-10-25');
+INSERT INTO Booking VALUES ('B115', 'PR115', 'M025', 2900.00, '2024-11-15');
+INSERT INTO Booking VALUES ('B116', 'PR116', 'M026', 3100.00, '2024-12-01');
+INSERT INTO Booking VALUES ('B117', 'PR117', 'M027', 2200.00, '2024-12-20');
+INSERT INTO Booking VALUES ('B118', 'PR118', 'M028', 2600.00, '2025-01-10');
+INSERT INTO Booking VALUES ('B119', 'PR119', 'M029', 3000.00, '2025-02-05');
+INSERT INTO Booking VALUES ('B120', 'PR120', 'M030', 2500.00, '2025-03-01');
+
+
+
+
+-- this is bridge table
+INSERT INTO BookingDetail VALUES (1, 'B001', 'P001', 'FL001', 'IP001', 'CL001', 12, 'Economy', 1299.98);
+INSERT INTO BookingDetail VALUES (1, 'B002', 'P002', 'FL002', 'IP002', 'CL002', 15, 'Business', 1399.99);
+INSERT INTO BookingDetail VALUES (1, 'B003', 'P003', 'FL003', 'IP003', 'CL003', 22, 'Economy', 199.99);
+INSERT INTO BookingDetail VALUES (1, 'B004', 'P004', 'FL004', 'IP004', 'CL004', 10, 'First', 299.99);
+INSERT INTO BookingDetail VALUES (1, 'B005', 'P005', 'FL005', 'IP005', 'CL005', 5, 'Economy', 149.99);
+INSERT INTO BookingDetail VALUES (1, 'B006', 'P006', 'FL006', 'IP006', 'CL006', 8, 'Business', 1799.98);
+INSERT INTO BookingDetail VALUES (1, 'B007', 'P007', 'FL007', 'IP007', 'CL007', 20, 'Economy', 249.99);
+INSERT INTO BookingDetail VALUES (1, 'B008', 'P008', 'FL008', 'IP008', 'CL008', 16, 'Business', 499.98);
+INSERT INTO BookingDetail VALUES (1, 'B009', 'P009', 'FL009', 'IP009', 'CL009', 25, 'Economy', 149.99);
+INSERT INTO BookingDetail VALUES (1, 'B010', 'P010', 'FL010', 'IP010', 'CL010', 14, 'First', 1199.98);
+INSERT INTO BookingDetail VALUES (1, 'B011', 'P001', 'FL011', 'IP001', 'CL001', 12, 'Economy', 1399.98);
+INSERT INTO BookingDetail VALUES (1, 'B012', 'P002', 'FL012', 'IP002', 'CL002', 15, 'Business', 1499.99);
+INSERT INTO BookingDetail VALUES (1, 'B013', 'P003', 'FL013', 'IP003', 'CL003', 22, 'Economy', 219.99);
+INSERT INTO BookingDetail VALUES (1, 'B014', 'P004', 'FL014', 'IP004', 'CL004', 10, 'First', 309.99);
+INSERT INTO BookingDetail VALUES (1, 'B015', 'P005', 'FL015', 'IP005', 'CL005', 5, 'Economy', 169.99);
+INSERT INTO BookingDetail VALUES (1, 'B016', 'P006', 'FL016', 'IP006', 'CL006', 8, 'Business', 1899.98);
+INSERT INTO BookingDetail VALUES (1, 'B017', 'P007', 'FL017', 'IP007', 'CL007', 20, 'Economy', 269.99);
+INSERT INTO BookingDetail VALUES (1, 'B018', 'P008', 'FL018', 'IP008', 'CL008', 16, 'Business', 529.98);
+INSERT INTO BookingDetail VALUES (1, 'B019', 'P009', 'FL019', 'IP009', 'CL009', 25, 'Economy', 169.99);
+INSERT INTO BookingDetail VALUES (1, 'B020', 'P010', 'FL020', 'IP010', 'CL010', 14, 'First', 1299.98);
+INSERT INTO BookingDetail VALUES (2, 'B021', 'P001', 'FL021', 'IP001', 'CL001', 12, 'Economy', 2799.96);
+INSERT INTO BookingDetail VALUES (2, 'B022', 'P002', 'FL022', 'IP002', 'CL002', 15, 'Business', 2899.98);
+INSERT INTO BookingDetail VALUES (2, 'B023', 'P003', 'FL023', 'IP003', 'CL003', 22, 'Economy', 399.98);
+INSERT INTO BookingDetail VALUES (2, 'B024', 'P004', 'FL024', 'IP004', 'CL004', 10, 'First', 599.98);
+INSERT INTO BookingDetail VALUES (2, 'B025', 'P005', 'FL025', 'IP005', 'CL005', 5, 'Economy', 299.98);
+INSERT INTO BookingDetail VALUES (2, 'B026', 'P006', 'FL026', 'IP006', 'CL006', 8, 'Business', 3599.96);
+INSERT INTO BookingDetail VALUES (2, 'B027', 'P007', 'FL027', 'IP007', 'CL007', 20, 'Economy', 539.98);
+INSERT INTO BookingDetail VALUES (2, 'B028', 'P008', 'FL028', 'IP008', 'CL008', 16, 'Business', 959.96);
+INSERT INTO BookingDetail VALUES (2, 'B029', 'P009', 'FL029', 'IP009', 'CL009', 25, 'Economy', 299.98);
+INSERT INTO BookingDetail VALUES (2, 'B030', 'P010', 'FL030', 'IP010', 'CL010', 14, 'First', 2399.96);
+INSERT INTO BookingDetail VALUES (1, 'B031', 'P001', 'FL031', 'IP001', 'CL001', 12, 'Economy', 1499.98);
+INSERT INTO BookingDetail VALUES (1, 'B032', 'P002', 'FL032', 'IP002', 'CL002', 15, 'Business', 1599.99);
+INSERT INTO BookingDetail VALUES (1, 'B033', 'P003', 'FL033', 'IP003', 'CL003', 22, 'Economy', 229.99);
+INSERT INTO BookingDetail VALUES (1, 'B034', 'P004', 'FL034', 'IP004', 'CL004', 10, 'First', 319.99);
+INSERT INTO BookingDetail VALUES (1, 'B035', 'P005', 'FL035', 'IP005', 'CL005', 5, 'Economy', 159.99);
+INSERT INTO BookingDetail VALUES (1, 'B036', 'P006', 'FL036', 'IP006', 'CL006', 8, 'Business', 1999.98);
+INSERT INTO BookingDetail VALUES (1, 'B037', 'P007', 'FL037', 'IP007', 'CL007', 20, 'Economy', 279.99);
+INSERT INTO BookingDetail VALUES (1, 'B038', 'P008', 'FL038', 'IP008', 'CL008', 16, 'Business', 549.98);
+INSERT INTO BookingDetail VALUES (1, 'B039', 'P009', 'FL039', 'IP009', 'CL009', 25, 'Economy', 159.99);
+INSERT INTO BookingDetail VALUES (1, 'B040', 'P010', 'FL040', 'IP010', 'CL010', 14, 'First', 1099.98);
+INSERT INTO BookingDetail VALUES (2, 'B041', 'P001', 'FL041', 'IP001', 'CL001', 12, 'Economy', 2999.96);
+INSERT INTO BookingDetail VALUES (2, 'B042', 'P002', 'FL042', 'IP002', 'CL002', 15, 'Business', 3199.98);
+INSERT INTO BookingDetail VALUES (2, 'B043', 'P003', 'FL043', 'IP003', 'CL003', 22, 'Economy', 459.98);
+INSERT INTO BookingDetail VALUES (2, 'B044', 'P004', 'FL044', 'IP004', 'CL004', 10, 'First', 639.98);
+INSERT INTO BookingDetail VALUES (2, 'B045', 'P005', 'FL045', 'IP005', 'CL005', 5, 'Economy', 319.98);
+INSERT INTO BookingDetail VALUES (2, 'B046', 'P006', 'FL046', 'IP006', 'CL006', 8, 'Business', 3999.96);
+INSERT INTO BookingDetail VALUES (2, 'B047', 'P007', 'FL047', 'IP007', 'CL007', 20, 'Economy', 559.98);
+INSERT INTO BookingDetail VALUES (2, 'B048', 'P008', 'FL048', 'IP008', 'CL008', 16, 'Business', 1099.96);
+INSERT INTO BookingDetail VALUES (2, 'B049', 'P009', 'FL049', 'IP009', 'CL009', 25, 'Economy', 319.98);
+INSERT INTO BookingDetail VALUES (2, 'B050', 'P010', 'FL050', 'IP010', 'CL010', 14, 'First', 2199.96);
+INSERT INTO BookingDetail VALUES (1, 'B051', 'P001', 'FL051', 'IP001', 'CL001', 12, 'Economy', 1599.98);
+INSERT INTO BookingDetail VALUES (1, 'B052', 'P002', 'FL052', 'IP002', 'CL002', 15, 'Business', 1699.99);
+INSERT INTO BookingDetail VALUES (1, 'B053', 'P003', 'FL053', 'IP003', 'CL003', 22, 'Economy', 239.99);
+INSERT INTO BookingDetail VALUES (1, 'B054', 'P004', 'FL054', 'IP004', 'CL004', 10, 'First', 329.99);
+INSERT INTO BookingDetail VALUES (1, 'B055', 'P005', 'FL055', 'IP005', 'CL005', 5, 'Economy', 169.99);
+INSERT INTO BookingDetail VALUES (1, 'B056', 'P006', 'FL056', 'IP006', 'CL006', 8, 'Business', 2099.98);
+INSERT INTO BookingDetail VALUES (1, 'B057', 'P007', 'FL057', 'IP007', 'CL007', 20, 'Economy', 289.99);
+INSERT INTO BookingDetail VALUES (1, 'B058', 'P008', 'FL058', 'IP008', 'CL008', 16, 'Business', 579.98);
+INSERT INTO BookingDetail VALUES (1, 'B059', 'P009', 'FL059', 'IP009', 'CL009', 25, 'Economy', 169.99);
+INSERT INTO BookingDetail VALUES (1, 'B060', 'P010', 'FL060', 'IP010', 'CL010', 14, 'First', 1199.98);
+INSERT INTO BookingDetail VALUES (2, 'B061', 'P001', 'FL061', 'IP001', 'CL001', 12, 'Economy', 3399.96);
+INSERT INTO BookingDetail VALUES (2, 'B062', 'P002', 'FL062', 'IP002', 'CL002', 15, 'Business', 3599.98);
+INSERT INTO BookingDetail VALUES (2, 'B063', 'P003', 'FL063', 'IP003', 'CL003', 22, 'Economy', 499.98);
+INSERT INTO BookingDetail VALUES (2, 'B064', 'P004', 'FL064', 'IP004', 'CL004', 10, 'First', 719.98);
+INSERT INTO BookingDetail VALUES (2, 'B065', 'P005', 'FL065', 'IP005', 'CL005', 5, 'Economy', 339.98);
+INSERT INTO BookingDetail VALUES (2, 'B066', 'P006', 'FL066', 'IP006', 'CL006', 8, 'Business', 4199.96);
+INSERT INTO BookingDetail VALUES (2, 'B067', 'P007', 'FL067', 'IP007', 'CL007', 20, 'Economy', 599.98);
+INSERT INTO BookingDetail VALUES (2, 'B068', 'P008', 'FL068', 'IP008', 'CL008', 16, 'Business', 1159.96);
+INSERT INTO BookingDetail VALUES (2, 'B069', 'P009', 'FL069', 'IP009', 'CL009', 25, 'Economy', 339.98);
+INSERT INTO BookingDetail VALUES (2, 'B070', 'P010', 'FL070', 'IP010', 'CL010', 14, 'First', 2399.96);
+INSERT INTO BookingDetail VALUES (1, 'B071', 'P001', 'FL071', 'IP001', 'CL001', 12, 'Economy', 1699.98);
+INSERT INTO BookingDetail VALUES (1, 'B072', 'P002', 'FL072', 'IP002', 'CL002', 15, 'Business', 1799.99);
+INSERT INTO BookingDetail VALUES (1, 'B073', 'P003', 'FL073', 'IP003', 'CL003', 22, 'Economy', 249.99);
+INSERT INTO BookingDetail VALUES (1, 'B074', 'P004', 'FL074', 'IP004', 'CL004', 10, 'First', 339.99);
+INSERT INTO BookingDetail VALUES (1, 'B075', 'P005', 'FL075', 'IP005', 'CL005', 5, 'Economy', 179.99);
+INSERT INTO BookingDetail VALUES (1, 'B076', 'P006', 'FL076', 'IP006', 'CL006', 8, 'Business', 2199.98);
+INSERT INTO BookingDetail VALUES (1, 'B077', 'P007', 'FL077', 'IP007', 'CL007', 20, 'Economy', 299.99);
+INSERT INTO BookingDetail VALUES (1, 'B078', 'P008', 'FL078', 'IP008', 'CL008', 16, 'Business', 599.98);
+INSERT INTO BookingDetail VALUES (1, 'B079', 'P009', 'FL079', 'IP009', 'CL009', 25, 'Economy', 179.99);
+INSERT INTO BookingDetail VALUES (1, 'B080', 'P010', 'FL080', 'IP010', 'CL010', 14, 'First', 1299.98);
+INSERT INTO BookingDetail VALUES (2, 'B081', 'P001', 'FL081', 'IP001', 'CL001', 12, 'Economy', 3399.96);
+INSERT INTO BookingDetail VALUES (2, 'B082', 'P002', 'FL082', 'IP002', 'CL002', 15, 'Business', 3599.98);
+INSERT INTO BookingDetail VALUES (2, 'B083', 'P003', 'FL083', 'IP003', 'CL003', 22, 'Economy', 459.98);
+INSERT INTO BookingDetail VALUES (2, 'B084', 'P004', 'FL084', 'IP004', 'CL004', 10, 'First', 639.98);
+INSERT INTO BookingDetail VALUES (2, 'B085', 'P005', 'FL085', 'IP005', 'CL005', 5, 'Economy', 359.98);
+INSERT INTO BookingDetail VALUES (2, 'B086', 'P006', 'FL086', 'IP006', 'CL006', 8, 'Business', 4399.96);
+INSERT INTO BookingDetail VALUES (2, 'B087', 'P007', 'FL087', 'IP007', 'CL007', 20, 'Economy', 629.98);
+INSERT INTO BookingDetail VALUES (2, 'B088', 'P008', 'FL088', 'IP008', 'CL008', 16, 'Business', 1199.96);
+INSERT INTO BookingDetail VALUES (2, 'B089', 'P009', 'FL089', 'IP009', 'CL009', 25, 'Economy', 359.98);
+INSERT INTO BookingDetail VALUES (2, 'B090', 'P010', 'FL090', 'IP010', 'CL010', 14, 'First', 2399.96);
+INSERT INTO BookingDetail VALUES (1, 'B091', 'P001', 'FL091', 'IP001', 'CL001', 12, 'Economy', 1799.98);
+INSERT INTO BookingDetail VALUES (1, 'B092', 'P002', 'FL092', 'IP002', 'CL002', 15, 'Business', 1899.99);
+INSERT INTO BookingDetail VALUES (1, 'B093', 'P003', 'FL093', 'IP003', 'CL003', 22, 'Economy', 259.99);
+INSERT INTO BookingDetail VALUES (1, 'B094', 'P004', 'FL094', 'IP004', 'CL004', 10, 'First', 349.99);
+INSERT INTO BookingDetail VALUES (1, 'B095', 'P005', 'FL095', 'IP005', 'CL005', 5, 'Economy', 189.99);
+INSERT INTO BookingDetail VALUES (1, 'B096', 'P006', 'FL096', 'IP006', 'CL006', 8, 'Business', 2299.98);
+INSERT INTO BookingDetail VALUES (1, 'B097', 'P007', 'FL097', 'IP007', 'CL007', 20, 'Economy', 309.99);
+INSERT INTO BookingDetail VALUES (1, 'B098', 'P008', 'FL098', 'IP008', 'CL008', 16, 'Business', 619.98);
+INSERT INTO BookingDetail VALUES (1, 'B099', 'P009', 'FL099', 'IP009', 'CL009', 25, 'Economy', 189.99);
+INSERT INTO BookingDetail VALUES (1, 'B100', 'P010', 'FL100', 'IP010', 'CL010', 14, 'First', 1399.98);
+INSERT INTO BookingDetail VALUES (1, 'B001', 'P002', 'FL003', 'IP004', 'CL005', 10, 'Economy', 1299.98);
+INSERT INTO BookingDetail VALUES (2, 'B002', 'P003', 'FL004', 'IP005', 'CL006', 15, 'Business', 1399.99);
+INSERT INTO BookingDetail VALUES (1, 'B003', 'P004', 'FL005', 'IP006', 'CL007', 22, 'Economy', 199.99);
+INSERT INTO BookingDetail VALUES (2, 'B004', 'P005', 'FL006', 'IP007', 'CL008', 10, 'First', 299.99);
+INSERT INTO BookingDetail VALUES (1, 'B005', 'P006', 'FL007', 'IP008', 'CL009', 5, 'Economy', 149.99);
+INSERT INTO BookingDetail VALUES (2, 'B006', 'P007', 'FL008', 'IP009', 'CL010', 8, 'Business', 1799.98);
+INSERT INTO BookingDetail VALUES (1, 'B007', 'P008', 'FL009', 'IP010', 'CL001', 20, 'Economy', 249.99);
+INSERT INTO BookingDetail VALUES (2, 'B008', 'P009', 'FL010', 'IP001', 'CL002', 16, 'Business', 499.98);
+INSERT INTO BookingDetail VALUES (1, 'B009', 'P010', 'FL011', 'IP002', 'CL003', 25, 'Economy', 149.99);
+INSERT INTO BookingDetail VALUES (2, 'B010', 'P001', 'FL012', 'IP003', 'CL004', 14, 'First', 1199.98);
+INSERT INTO BookingDetail VALUES (1, 'B011', 'P002', 'FL013', 'IP004', 'CL005', 12, 'Economy', 1399.98);
+INSERT INTO BookingDetail VALUES (2, 'B012', 'P003', 'FL014', 'IP005', 'CL006', 15, 'Business', 1499.99);
+INSERT INTO BookingDetail VALUES (1, 'B013', 'P004', 'FL015', 'IP006', 'CL007', 22, 'Economy', 219.99);
+INSERT INTO BookingDetail VALUES (2, 'B014', 'P005', 'FL016', 'IP007', 'CL008', 10, 'First', 309.99);
+INSERT INTO BookingDetail VALUES (1, 'B015', 'P006', 'FL017', 'IP008', 'CL009', 5, 'Economy', 169.99);
+INSERT INTO BookingDetail VALUES (2, 'B016', 'P007', 'FL018', 'IP009', 'CL010', 8, 'Business', 1899.98);
+INSERT INTO BookingDetail VALUES (1, 'B017', 'P008', 'FL019', 'IP010', 'CL001', 20, 'Economy', 269.99);
+INSERT INTO BookingDetail VALUES (2, 'B018', 'P009', 'FL020', 'IP001', 'CL002', 16, 'Business', 529.98);
+INSERT INTO BookingDetail VALUES (1, 'B019', 'P010', 'FL021', 'IP002', 'CL003', 25, 'Economy', 169.99);
+INSERT INTO BookingDetail VALUES (2, 'B020', 'P001', 'FL022', 'IP003', 'CL004', 14, 'First', 1299.98);
+INSERT INTO BookingDetail VALUES (1, 'B021', 'P002', 'FL023', 'IP004', 'CL005', 12, 'Economy', 2799.96);
+INSERT INTO BookingDetail VALUES (2, 'B022', 'P003', 'FL024', 'IP005', 'CL006', 15, 'Business', 2899.98);
+INSERT INTO BookingDetail VALUES (1, 'B023', 'P004', 'FL025', 'IP006', 'CL007', 22, 'Economy', 399.98);
+INSERT INTO BookingDetail VALUES (2, 'B024', 'P005', 'FL026', 'IP007', 'CL008', 10, 'First', 599.98);
+INSERT INTO BookingDetail VALUES (1, 'B025', 'P006', 'FL027', 'IP008', 'CL009', 5, 'Economy', 299.98);
+INSERT INTO BookingDetail VALUES (2, 'B026', 'P007', 'FL028', 'IP009', 'CL010', 8, 'Business', 3599.96);
+INSERT INTO BookingDetail VALUES (1, 'B027', 'P008', 'FL029', 'IP010', 'CL001', 20, 'Economy', 539.98);
+INSERT INTO BookingDetail VALUES (2, 'B028', 'P009', 'FL030', 'IP001', 'CL002', 16, 'Business', 959.96);
+INSERT INTO BookingDetail VALUES (1, 'B029', 'P010', 'FL031', 'IP002', 'CL003', 25, 'Economy', 299.98);
+INSERT INTO BookingDetail VALUES (2, 'B030', 'P001', 'FL032', 'IP003', 'CL004', 14, 'First', 2399.96);
+INSERT INTO BookingDetail VALUES (1, 'B031', 'P002', 'FL033', 'IP004', 'CL005', 12, 'Economy', 1499.98);
+INSERT INTO BookingDetail VALUES (2, 'B032', 'P003', 'FL034', 'IP005', 'CL006', 15, 'Business', 1599.99);
+INSERT INTO BookingDetail VALUES (1, 'B033', 'P004', 'FL035', 'IP006', 'CL007', 22, 'Economy', 229.99);
+INSERT INTO BookingDetail VALUES (2, 'B034', 'P005', 'FL036', 'IP007', 'CL008', 10, 'First', 319.99);
+INSERT INTO BookingDetail VALUES (1, 'B035', 'P006', 'FL037', 'IP008', 'CL009', 5, 'Economy', 159.99);
+INSERT INTO BookingDetail VALUES (2, 'B036', 'P007', 'FL038', 'IP009', 'CL010', 8, 'Business', 1999.98);
+INSERT INTO BookingDetail VALUES (1, 'B037', 'P008', 'FL039', 'IP010', 'CL001', 20, 'Economy', 279.99);
+INSERT INTO BookingDetail VALUES (2, 'B038', 'P009', 'FL040', 'IP001', 'CL002', 16, 'Business', 549.98);
+INSERT INTO BookingDetail VALUES (1, 'B039', 'P010', 'FL041', 'IP002', 'CL003', 25, 'Economy', 159.99);
+INSERT INTO BookingDetail VALUES (2, 'B040', 'P001', 'FL042', 'IP003', 'CL004', 14, 'First', 1099.98);
+INSERT INTO BookingDetail VALUES (1, 'B041', 'P002', 'FL043', 'IP004', 'CL005', 12, 'Economy', 2999.96);
+INSERT INTO BookingDetail VALUES (2, 'B042', 'P003', 'FL044', 'IP005', 'CL006', 15, 'Business', 3199.98);
+INSERT INTO BookingDetail VALUES (1, 'B043', 'P004', 'FL045', 'IP006', 'CL007', 22, 'Economy', 459.98);
+INSERT INTO BookingDetail VALUES (2, 'B044', 'P005', 'FL046', 'IP007', 'CL008', 10, 'First', 639.98);
+INSERT INTO BookingDetail VALUES (1, 'B045', 'P006', 'FL047', 'IP008', 'CL009', 5, 'Economy', 319.98);
+INSERT INTO BookingDetail VALUES (2, 'B046', 'P007', 'FL048', 'IP009', 'CL010', 8, 'Business', 3999.96);
+INSERT INTO BookingDetail VALUES (1, 'B047', 'P008', 'FL049', 'IP010', 'CL001', 20, 'Economy', 559.98);
+INSERT INTO BookingDetail VALUES (2, 'B048', 'P009', 'FL050', 'IP001', 'CL002', 16, 'Business', 1099.96);
+INSERT INTO BookingDetail VALUES (1, 'B049', 'P010', 'FL051', 'IP002', 'CL003', 25, 'Economy', 319.98);
+INSERT INTO BookingDetail VALUES (2, 'B050', 'P001', 'FL052', 'IP003', 'CL004', 14, 'First', 3599.96);
+INSERT INTO BookingDetail VALUES (1, 'B051', 'P002', 'FL053', 'IP004', 'CL005', 12, 'Economy', 1599.98);
+INSERT INTO BookingDetail VALUES (2, 'B052', 'P003', 'FL054', 'IP005', 'CL006', 15, 'Business', 1699.99);
+INSERT INTO BookingDetail VALUES (1, 'B053', 'P004', 'FL055', 'IP006', 'CL007', 22, 'Economy', 239.99);
+INSERT INTO BookingDetail VALUES (2, 'B054', 'P005', 'FL056', 'IP007', 'CL008', 10, 'First', 329.99);
+INSERT INTO BookingDetail VALUES (1, 'B055', 'P006', 'FL057', 'IP008', 'CL009', 5, 'Economy', 179.99);
+INSERT INTO BookingDetail VALUES (2, 'B056', 'P007', 'FL058', 'IP009', 'CL010', 8, 'Business', 2099.98);
+INSERT INTO BookingDetail VALUES (1, 'B057', 'P008', 'FL059', 'IP010', 'CL001', 20, 'Economy', 289.99);
+INSERT INTO BookingDetail VALUES (2, 'B058', 'P009', 'FL060', 'IP001', 'CL002', 16, 'Business', 569.98);
+INSERT INTO BookingDetail VALUES (1, 'B059', 'P010', 'FL061', 'IP002', 'CL003', 25, 'Economy', 179.99);
+INSERT INTO BookingDetail VALUES (2, 'B060', 'P001', 'FL062', 'IP003', 'CL004', 14, 'First', 1399.98);
+INSERT INTO BookingDetail VALUES (1, 'B061', 'P002', 'FL063', 'IP004', 'CL005', 12, 'Economy', 3099.96);
+INSERT INTO BookingDetail VALUES (2, 'B062', 'P003', 'FL064', 'IP005', 'CL006', 15, 'Business', 3299.98);
+INSERT INTO BookingDetail VALUES (1, 'B063', 'P004', 'FL065', 'IP006', 'CL007', 22, 'Economy', 479.98);
+INSERT INTO BookingDetail VALUES (2, 'B064', 'P005', 'FL066', 'IP007', 'CL008', 10, 'First', 659.98);
+INSERT INTO BookingDetail VALUES (1, 'B065', 'P006', 'FL067', 'IP008', 'CL009', 5, 'Economy', 339.98);
+INSERT INTO BookingDetail VALUES (2, 'B066', 'P007', 'FL068', 'IP009', 'CL010', 8, 'Business', 4099.96);
+INSERT INTO BookingDetail VALUES (1, 'B067', 'P008', 'FL069', 'IP010', 'CL001', 20, 'Economy', 579.98);
+INSERT INTO BookingDetail VALUES (2, 'B068', 'P009', 'FL070', 'IP001', 'CL002', 16, 'Business', 1149.96);
+INSERT INTO BookingDetail VALUES (1, 'B069', 'P010', 'FL071', 'IP002', 'CL003', 25, 'Economy', 339.98);
+INSERT INTO BookingDetail VALUES (2, 'B070', 'P001', 'FL072', 'IP003', 'CL004', 14, 'First', 3699.96);
+INSERT INTO BookingDetail VALUES (1, 'B071', 'P002', 'FL073', 'IP004', 'CL005', 12, 'Economy', 1699.98);
+INSERT INTO BookingDetail VALUES (2, 'B072', 'P003', 'FL074', 'IP005', 'CL006', 15, 'Business', 1799.99);
+INSERT INTO BookingDetail VALUES (1, 'B073', 'P004', 'FL075', 'IP006', 'CL007', 22, 'Economy', 249.99);
+INSERT INTO BookingDetail VALUES (2, 'B074', 'P005', 'FL076', 'IP007', 'CL008', 10, 'First', 339.99);
+INSERT INTO BookingDetail VALUES (1, 'B075', 'P006', 'FL077', 'IP008', 'CL009', 5, 'Economy', 189.99);
+INSERT INTO BookingDetail VALUES (2, 'B076', 'P007', 'FL078', 'IP009', 'CL010', 8, 'Business', 2199.98);
+INSERT INTO BookingDetail VALUES (1, 'B077', 'P008', 'FL079', 'IP010', 'CL001', 20, 'Economy', 299.99);
+INSERT INTO BookingDetail VALUES (2, 'B078', 'P009', 'FL080', 'IP001', 'CL002', 16, 'Business', 599.98);
+INSERT INTO BookingDetail VALUES (1, 'B079', 'P010', 'FL081', 'IP002', 'CL003', 25, 'Economy', 189.99);
+INSERT INTO BookingDetail VALUES (2, 'B080', 'P001', 'FL082', 'IP003', 'CL004', 14, 'First', 1499.98);
+INSERT INTO BookingDetail VALUES (1, 'B081', 'P002', 'FL083', 'IP004', 'CL005', 12, 'Economy', 3199.96);
+INSERT INTO BookingDetail VALUES (2, 'B082', 'P003', 'FL084', 'IP005', 'CL006', 15, 'Business', 3399.98);
+INSERT INTO BookingDetail VALUES (1, 'B083', 'P004', 'FL085', 'IP006', 'CL007', 22, 'Economy', 499.98);
+INSERT INTO BookingDetail VALUES (2, 'B084', 'P005', 'FL086', 'IP007', 'CL008', 10, 'First', 679.98);
+INSERT INTO BookingDetail VALUES (1, 'B085', 'P006', 'FL087', 'IP008', 'CL009', 5, 'Economy', 359.98);
+INSERT INTO BookingDetail VALUES (2, 'B086', 'P007', 'FL088', 'IP009', 'CL010', 8, 'Business', 4199.96);
+INSERT INTO BookingDetail VALUES (1, 'B087', 'P008', 'FL089', 'IP010', 'CL001', 20, 'Economy', 599.98);
+INSERT INTO BookingDetail VALUES (2, 'B088', 'P009', 'FL090', 'IP001', 'CL002', 16, 'Business', 1199.96);
+INSERT INTO BookingDetail VALUES (1, 'B089', 'P010', 'FL091', 'IP002', 'CL003', 25, 'Economy', 359.98);
+INSERT INTO BookingDetail VALUES (2, 'B090', 'P001', 'FL092', 'IP003', 'CL004', 14, 'First', 3799.96);
+INSERT INTO BookingDetail VALUES (1, 'B091', 'P002', 'FL093', 'IP004', 'CL005', 12, 'Economy', 1799.98);
+INSERT INTO BookingDetail VALUES (2, 'B092', 'P003', 'FL094', 'IP005', 'CL006', 15, 'Business', 1899.99);
+INSERT INTO BookingDetail VALUES (1, 'B093', 'P004', 'FL095', 'IP006', 'CL007', 22, 'Economy', 269.99);
+INSERT INTO BookingDetail VALUES (2, 'B094', 'P005', 'FL096', 'IP007', 'CL008', 10, 'First', 349.99);
+INSERT INTO BookingDetail VALUES (1, 'B095', 'P006', 'FL097', 'IP008', 'CL009', 5, 'Economy', 209.99);
+INSERT INTO BookingDetail VALUES (2, 'B096', 'P007', 'FL098', 'IP009', 'CL010', 8, 'Business', 2299.98);
+INSERT INTO BookingDetail VALUES (1, 'B097', 'P008', 'FL099', 'IP010', 'CL001', 20, 'Economy', 309.99);
+INSERT INTO BookingDetail VALUES (2, 'B098', 'P009', 'FL100', 'IP001', 'CL002', 16, 'Business', 629.98);
+INSERT INTO BookingDetail VALUES (1, 'B099', 'P010', 'FL001', 'IP002', 'CL003', 25, 'Economy', 209.99);
+INSERT INTO BookingDetail VALUES (2, 'B100', 'P001', 'FL002', 'IP003', 'CL004', 14, 'First', 1599.98);
+INSERT INTO BookingDetail VALUES (2, 'B002', 'P004', 'FL005', 'IP006', 'CL007', 18, 'Business', 2299.99);
+INSERT INTO BookingDetail VALUES (1, 'B005', 'P001', 'FL011', 'IP003', 'CL004', 6, 'Business', 2099.98);
+INSERT INTO BookingDetail VALUES (1, 'B007', 'P009', 'FL015', 'IP007', 'CL008', 23, 'Economy', 389.99);
+INSERT INTO BookingDetail VALUES (2, 'B008', 'P002', 'FL017', 'IP009', 'CL010', 24, 'Business', 1299.99);
+INSERT INTO BookingDetail VALUES (1, 'B009', 'P004', 'FL019', 'IP002', 'CL003', 26, 'First', 2999.99);
+INSERT INTO BookingDetail VALUES (2, 'B010', 'P006', 'FL021', 'IP004', 'CL005', 27, 'Economy', 439.99);
+INSERT INTO BookingDetail VALUES (1, 'B011', 'P008', 'FL023', 'IP006', 'CL007', 9, 'Business', 2199.99);
+INSERT INTO BookingDetail VALUES (2, 'B012', 'P010', 'FL025', 'IP008', 'CL009', 11, 'First', 4699.99);
+INSERT INTO BookingDetail VALUES (2, 'B014', 'P001', 'FL029', 'IP003', 'CL004', 29, 'Business', 1499.99);
+INSERT INTO BookingDetail VALUES (1, 'B017', 'P009', 'FL035', 'IP009', 'CL010', 32, 'Business', 3199.98);
+INSERT INTO BookingDetail VALUES (2, 'B018', 'P002', 'FL037', 'IP002', 'CL003', 33, 'First', 1899.99);
+INSERT INTO BookingDetail VALUES (1, 'B019', 'P004', 'FL039', 'IP004', 'CL005', 34, 'Economy', 499.98);
+INSERT INTO BookingDetail VALUES (2, 'B020', 'P006', 'FL041', 'IP006', 'CL007', 35, 'Business', 3999.96);
+INSERT INTO BookingDetail VALUES (1, 'B021', 'P008', 'FL043', 'IP008', 'CL009', 36, 'First', 1099.98);
+INSERT INTO BookingDetail VALUES (2, 'B022', 'P010', 'FL045', 'IP001', 'CL002', 37, 'Economy', 599.98);
+INSERT INTO BookingDetail VALUES (2, 'B024', 'P001', 'FL049', 'IP005', 'CL006', 39, 'First', 4599.98);
+INSERT INTO BookingDetail VALUES (1, 'B027', 'P009', 'FL055', 'IP002', 'CL003', 42, 'First', 2499.98);
+INSERT INTO BookingDetail VALUES (2, 'B028', 'P002', 'FL057', 'IP004', 'CL005', 43, 'Economy', 379.98);
+INSERT INTO BookingDetail VALUES (1, 'B029', 'P004', 'FL059', 'IP006', 'CL007', 44, 'Business', 1499.96);
+INSERT INTO BookingDetail VALUES (2, 'B030', 'P006', 'FL061', 'IP008', 'CL009', 45, 'First', 4799.96);
+INSERT INTO BookingDetail VALUES (1, 'B031', 'P008', 'FL063', 'IP001', 'CL002', 46, 'Economy', 329.98);
+INSERT INTO BookingDetail VALUES (2, 'B032', 'P010', 'FL065', 'IP003', 'CL004', 47, 'Business', 3199.98);
+INSERT INTO BookingDetail VALUES (2, 'B034', 'P001', 'FL069', 'IP007', 'CL008', 49, 'Economy', 219.98);
+INSERT INTO BookingDetail VALUES (1, 'B037', 'P009', 'FL075', 'IP004', 'CL005', 52, 'Economy', 359.96);
+INSERT INTO BookingDetail VALUES (2, 'B038', 'P002', 'FL077', 'IP006', 'CL007', 53, 'Business', 3999.96);
+INSERT INTO BookingDetail VALUES (1, 'B039', 'P004', 'FL079', 'IP008', 'CL009', 54, 'First', 1299.96);
+INSERT INTO BookingDetail VALUES (2, 'B040', 'P006', 'FL081', 'IP001', 'CL002', 55, 'Economy', 479.96);
+INSERT INTO BookingDetail VALUES (1, 'B041', 'P008', 'FL083', 'IP003', 'CL004', 56, 'Business', 2199.98);
+INSERT INTO BookingDetail VALUES (2, 'B042', 'P010', 'FL085', 'IP005', 'CL006', 57, 'First', 2799.98);
+INSERT INTO BookingDetail VALUES (1, 'B043', 'P003', 'FL087', 'IP007', 'CL008', 58, 'Economy', 139.98);
+INSERT INTO BookingDetail VALUES (2, 'B044', 'P001', 'FL089', 'IP009', 'CL010', 59, 'Business', 3299.98);
+INSERT INTO BookingDetail VALUES (1, 'B045', 'P005', 'FL091', 'IP002', 'CL003', 60, 'First', 1899.98);
+INSERT INTO BookingDetail VALUES (1, 'B047', 'P009', 'FL095', 'IP006', 'CL007', 62, 'Business', 3899.98);
+INSERT INTO BookingDetail VALUES (2, 'B048', 'P002', 'FL097', 'IP008', 'CL009', 63, 'First', 4899.96);
+INSERT INTO BookingDetail VALUES (1, 'B049', 'P004', 'FL099', 'IP001', 'CL002', 64, 'Economy', 169.98);
+INSERT INTO BookingDetail VALUES (2, 'B050', 'P006', 'FL001', 'IP003', 'CL004', 65, 'Business', 1999.98);
+INSERT INTO BookingDetail VALUES (2, 'B052', 'P004', 'FL004', 'IP007', 'CL008', 67, 'Business', 2599.99);
+INSERT INTO BookingDetail VALUES (1, 'B053', 'P006', 'FL006', 'IP009', 'CL010', 68, 'First', 3699.99);
+INSERT INTO BookingDetail VALUES (2, 'B054', 'P008', 'FL008', 'IP002', 'CL003', 69, 'Economy', 329.99);
+INSERT INTO BookingDetail VALUES (1, 'B055', 'P010', 'FL010', 'IP004', 'CL005', 70, 'Business', 2399.99);
+INSERT INTO BookingDetail VALUES (2, 'B056', 'P003', 'FL012', 'IP006', 'CL007', 71, 'First', 4099.99);
+INSERT INTO BookingDetail VALUES (1, 'B057', 'P001', 'FL014', 'IP008', 'CL009', 72, 'Economy', 359.99);
+INSERT INTO BookingDetail VALUES (2, 'B058', 'P005', 'FL016', 'IP001', 'CL002', 73, 'Business', 2699.99);
+INSERT INTO BookingDetail VALUES (1, 'B059', 'P007', 'FL018', 'IP003', 'CL004', 74, 'First', 4899.99);
+INSERT INTO BookingDetail VALUES (2, 'B060', 'P009', 'FL020', 'IP005', 'CL006', 75, 'Economy', 329.98);
+INSERT INTO BookingDetail VALUES (2, 'B062', 'P004', 'FL024', 'IP009', 'CL010', 77, 'First', 2499.99);
+INSERT INTO BookingDetail VALUES (1, 'B063', 'P006', 'FL026', 'IP002', 'CL003', 78, 'Economy', 449.98);
+INSERT INTO BookingDetail VALUES (2, 'B064', 'P008', 'FL028', 'IP004', 'CL005', 79, 'Business', 1999.99);
+INSERT INTO BookingDetail VALUES (1, 'B065', 'P010', 'FL030', 'IP006', 'CL007', 80, 'First', 3299.99);
+INSERT INTO BookingDetail VALUES (2, 'B066', 'P003', 'FL032', 'IP008', 'CL009', 81, 'Economy', 289.98);
+INSERT INTO BookingDetail VALUES (1, 'B067', 'P001', 'FL034', 'IP001', 'CL002', 82, 'Business', 2399.98);
+INSERT INTO BookingDetail VALUES (2, 'B068', 'P005', 'FL036', 'IP003', 'CL004', 83, 'First', 4599.99);
+INSERT INTO BookingDetail VALUES (1, 'B069', 'P007', 'FL038', 'IP005', 'CL006', 84, 'Economy', 319.98);
+INSERT INTO BookingDetail VALUES (2, 'B070', 'P009', 'FL040', 'IP007', 'CL008', 85, 'Business', 2799.98);
+INSERT INTO BookingDetail VALUES (2, 'B072', 'P004', 'FL044', 'IP002', 'CL003', 87, 'Economy', 169.98);
+INSERT INTO BookingDetail VALUES (1, 'B073', 'P006', 'FL046', 'IP004', 'CL005', 88, 'Business', 1999.98);
+INSERT INTO BookingDetail VALUES (2, 'B074', 'P008', 'FL048', 'IP006', 'CL007', 89, 'First', 3999.96);
+INSERT INTO BookingDetail VALUES (1, 'B075', 'P010', 'FL050', 'IP008', 'CL009', 90, 'Economy', 209.98);
+INSERT INTO BookingDetail VALUES (2, 'B076', 'P003', 'FL052', 'IP001', 'CL002', 91, 'Business', 1899.98);
+INSERT INTO BookingDetail VALUES (1, 'B077', 'P001', 'FL054', 'IP003', 'CL004', 92, 'First', 2199.98);
+INSERT INTO BookingDetail VALUES (2, 'B078', 'P005', 'FL056', 'IP005', 'CL006', 93, 'Economy', 189.98);
+INSERT INTO BookingDetail VALUES (1, 'B079', 'P007', 'FL058', 'IP007', 'CL008', 94, 'Business', 3199.98);
+INSERT INTO BookingDetail VALUES (2, 'B080', 'P009', 'FL060', 'IP009', 'CL010', 95, 'First', 4299.98);
+INSERT INTO BookingDetail VALUES (2, 'B082', 'P004', 'FL064', 'IP004', 'CL005', 97, 'Business', 2599.96);
+INSERT INTO BookingDetail VALUES (1, 'B083', 'P006', 'FL066', 'IP006', 'CL007', 98, 'First', 4099.96);
+INSERT INTO BookingDetail VALUES (2, 'B084', 'P008', 'FL068', 'IP008', 'CL009', 99, 'Economy', 359.98);
+INSERT INTO BookingDetail VALUES (1, 'B085', 'P010', 'FL070', 'IP001', 'CL002', 100, 'Business', 2699.98);
+INSERT INTO BookingDetail VALUES (2, 'B086', 'P003', 'FL072', 'IP003', 'CL004', 101, 'First', 3999.98);
+INSERT INTO BookingDetail VALUES (1, 'B087', 'P001', 'FL074', 'IP005', 'CL006', 102, 'Economy', 209.96);
+INSERT INTO BookingDetail VALUES (2, 'B088', 'P005', 'FL076', 'IP007', 'CL008', 103, 'Business', 2899.96);
+INSERT INTO BookingDetail VALUES (1, 'B089', 'P007', 'FL078', 'IP009', 'CL010', 104, 'First', 3799.98);
+INSERT INTO BookingDetail VALUES (2, 'B090', 'P009', 'FL080', 'IP002', 'CL003', 105, 'Economy', 289.99);
+INSERT INTO BookingDetail VALUES (2, 'B092', 'P004', 'FL084', 'IP006', 'CL007', 107, 'First', 4399.99);
+INSERT INTO BookingDetail VALUES (1, 'B093', 'P006', 'FL086', 'IP008', 'CL009', 108, 'Economy', 199.99);
+INSERT INTO BookingDetail VALUES (2, 'B094', 'P008', 'FL088', 'IP001', 'CL002', 109, 'Business', 1999.99);
+INSERT INTO BookingDetail VALUES (1, 'B095', 'P010', 'FL090', 'IP003', 'CL004', 110, 'First', 3599.99);
+INSERT INTO BookingDetail VALUES (2, 'B096', 'P003', 'FL092', 'IP005', 'CL006', 111, 'Economy', 329.99);
+INSERT INTO BookingDetail VALUES (1, 'B097', 'P001', 'FL094', 'IP007', 'CL008', 112, 'Business', 2799.99);
+INSERT INTO BookingDetail VALUES (2, 'B098', 'P005', 'FL096', 'IP009', 'CL010', 113, 'First', 4199.99);
+INSERT INTO BookingDetail VALUES (1, 'B099', 'P007', 'FL098', 'IP002', 'CL003', 114, 'Economy', 229.99);
+INSERT INTO BookingDetail VALUES (2, 'B100', 'P009', 'FL100', 'IP004', 'CL005', 115, 'Business', 2499.99);
+INSERT INTO BookingDetail VALUES (1, 'B033', 'P001', 'FL016', 'IP005', 'CL008', 60, 'Economy', 1799.99);
+INSERT INTO BookingDetail VALUES (1, 'B034', 'P002', 'FL017', 'IP006', 'CL009', 45, 'Business', 2799.99);
+INSERT INTO BookingDetail VALUES (1, 'B035', 'P003', 'FL018', 'IP007', 'CL010', 50, 'First', 3299.99);
+INSERT INTO BookingDetail VALUES (1, 'B036', 'P004', 'FL019', 'IP008', 'CL001', 35, 'Economy', 999.99);
+INSERT INTO BookingDetail VALUES (2, 'B037', 'P005', 'FL020', 'IP009', 'CL002', 40, 'Business', 2199.99);
+INSERT INTO BookingDetail VALUES (1, 'B038', 'P006', 'FL021', 'IP010', 'CL003', 55, 'First', 3999.99);
+INSERT INTO BookingDetail VALUES (1, 'B039', 'P007', 'FL022', 'IP001', 'CL004', 25, 'Economy', 599.99);
+INSERT INTO BookingDetail VALUES (1, 'B040', 'P008', 'FL023', 'IP002', 'CL005', 30, 'Business', 1599.99);
+INSERT INTO BookingDetail VALUES (2, 'B041', 'P009', 'FL024', 'IP003', 'CL006', 65, 'First', 4599.99);
+INSERT INTO BookingDetail VALUES (1, 'B042', 'P010', 'FL025', 'IP004', 'CL007', 22, 'Economy', 499.99);
+INSERT INTO BookingDetail VALUES (1, 'B043', 'P001', 'FL026', 'IP005', 'CL008', 27, 'Business', 1299.99);
+INSERT INTO BookingDetail VALUES (1, 'B044', 'P002', 'FL027', 'IP006', 'CL009', 32, 'First', 3499.99);
+INSERT INTO BookingDetail VALUES (1, 'B045', 'P003', 'FL028', 'IP007', 'CL010', 42, 'Economy', 799.99);
+INSERT INTO BookingDetail VALUES (1, 'B046', 'P004', 'FL029', 'IP008', 'CL001', 29, 'Business', 1399.99);
+INSERT INTO BookingDetail VALUES (2, 'B047', 'P005', 'FL030', 'IP009', 'CL002', 38, 'First', 3799.99);
+INSERT INTO BookingDetail VALUES (1, 'B048', 'P006', 'FL031', 'IP010', 'CL003', 48, 'Economy', 949.99);
+INSERT INTO BookingDetail VALUES (1, 'B049', 'P007', 'FL032', 'IP001', 'CL004', 52, 'Business', 1899.99);
+INSERT INTO BookingDetail VALUES (1, 'B050', 'P008', 'FL033', 'IP002', 'CL005', 41, 'First', 3299.99);
+INSERT INTO BookingDetail VALUES (1, 'B051', 'P009', 'FL034', 'IP003', 'CL006', 57, 'Economy', 1299.99);
+
+
+-- this is parent table
+INSERT INTO CheckLuggages VALUES (1, 'CL001', 23.5, 'checked-in', 'TAG001');
+INSERT INTO CheckLuggages VALUES (2, 'CL002', 18.0, 'checked-in', 'TAG002');
+INSERT INTO CheckLuggages VALUES (3, 'CL003', 22.0, 'lost', 'TAG003');
+INSERT INTO CheckLuggages VALUES (4, 'CL004', 20.5, 'checked-in', 'TAG004');
+INSERT INTO CheckLuggages VALUES (5, 'CL005', 25.0, 'checked-in', 'TAG005');
+INSERT INTO CheckLuggages VALUES (6, 'CL006', 15.5, 'lost', 'TAG006');
+INSERT INTO CheckLuggages VALUES (7, 'CL007', 30.0, 'checked-in', 'TAG007');
+INSERT INTO CheckLuggages VALUES (8, 'CL008', 17.0, 'checked-in', 'TAG008');
+INSERT INTO CheckLuggages VALUES (9, 'CL009', 21.0, 'checked-in', 'TAG009');
+INSERT INTO CheckLuggages VALUES (10, 'CL010', 19.5, 'lost', 'TAG010');
+
+Commit;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Parent
+SELECT COUNT(*) AS "No of Members"
+FROM Members;
+
+SELECT COUNT(*) AS "No of Campaign"
+FROM Campaign;
+
+SELECT COUNT(*) AS "No of Passengers"
+FROM Passengers;
+
+SELECT COUNT(*) AS "No of Routes"
+FROM Routes;
+
+SELECT COUNT(*) AS "No of Parts"
+FROM Parts;
+
+SELECT COUNT(*) AS "No of Airplane"
+FROM Airplane;
+
+SELECT COUNT(*) AS "No of Items"
+FROM Items;
+
+SELECT COUNT(*) AS "No of Staffs"
+FROM Staffs;
+
+SELECT COUNT(*) AS "No of Insurance Policy"
+FROM InsurancePolicy; 
+
+--Child
+SELECT COUNT(*) AS "No of Promotions"
+FROM Promotions;
+
+
+SELECT COUNT(*) AS "No of Claims"
+FROM Claim;
+
+SELECT COUNT(*) AS "No of Purchases"
+FROM Purchase;
+
+SELECT COUNT(*) AS "No of Maintenance Events"
+FROM MaintenanceEvent;
+
+SELECT COUNT(*) AS "No of Flights"
+FROM Flights;
+
+SELECT COUNT(*) AS "No of Workloads"
+FROM Workloads;
+
+SELECT COUNT(*) AS "No of Bookings"
+FROM Booking;
+
+SELECT COUNT(*) AS "No of Check Luggage"
+FROM CheckLuggages;
+
+SELECT COUNT(*) AS "No of Booking Details"
+FROM BookingDetail;
+
+SELECT SUM(counts) AS "Total Count"
+FROM (
+    SELECT COUNT(*) AS counts FROM Members
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Campaign
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Passengers
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Routes
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Parts
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Airplane
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Items
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Staffs
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM InsurancePolicy
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Promotions
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Claim
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Purchase
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM MaintenanceEvent
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Flights
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Workloads
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM Booking
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM CheckLuggages
+    UNION ALL
+    SELECT COUNT(*) AS counts FROM BookingDetail
+);

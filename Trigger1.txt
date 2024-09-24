@@ -1,0 +1,63 @@
+-- Set up formatting for the report
+SET LINESIZE 200
+SET PAGESIZE 200
+SET SERVEROUTPUT ON
+
+-- Drop the existing trigger if it exists
+DROP TRIGGER CheckMaintenanceBeforeAssign;
+
+-- Drop the existing sequence if it exists
+DROP SEQUENCE FlightID_SeqProcedure;
+
+-- Create the sequence for FlightID generation
+CREATE SEQUENCE FlightID_SeqProcedure
+START WITH 121
+INCREMENT BY 1
+NOCACHE;
+
+-- Create or replace the trigger with sequence for FlightID generation
+CREATE OR REPLACE TRIGGER CheckMaintenanceBeforeAssign
+BEFORE INSERT ON Flights
+FOR EACH ROW
+DECLARE
+    last_maintenance DATE;
+BEGIN
+    -- Attempt to fetch the last maintenance date for the given airplane
+    SELECT MAX(EventDate) INTO last_maintenance 
+    FROM MaintenanceEvent 
+    WHERE AirplaneID = :NEW.AirplaneID;
+
+    -- Check if maintenance is overdue or if no maintenance records exist
+    IF last_maintenance IS NULL OR SYSDATE - last_maintenance > 365 THEN  
+        -- Raise an error if the last maintenance was more than 365 days ago
+        RAISE_APPLICATION_ERROR(-20003, 'Aircraft maintenance required before scheduling this flight.');
+    END IF;
+
+    -- Generate a new FlightID using the sequence FlightID_SeqProcedure
+    :NEW.FlightID := 'FL' || FlightID_SeqProcedure.NEXTVAL;
+END;
+/
+
+-- Demonstration to show the trigger working
+
+-- Update the MaintenanceEvent to show the application error
+UPDATE MaintenanceEvent
+SET EventDate = TO_DATE('2022-07-01', 'YYYY-MM-DD')
+WHERE AirplaneID = 'AP001';
+
+-- Attempting to insert a flight will fail due to last maintenance being more than 365 days ago
+INSERT INTO Flights (FlightID, RouteID, AirplaneID, FlightNumber, DepartureDateTime, ArrivalDateTime)
+VALUES ('FL124', 'R001', 'AP001', 'NY-LA-1003', TO_DATE('2024-09-10 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_DATE('2024-09-10 16:00:00', 'YYYY-MM-DD HH24:MI:SS'));
+
+-- Update the MaintenanceEvent to allow the flight to be added
+UPDATE MaintenanceEvent
+SET EventDate = TO_DATE('2030-07-01', 'YYYY-MM-DD')
+WHERE AirplaneID = 'AP001';
+
+-- Insert a flight using the sequence to generate FlightID starting with 'FL'
+INSERT INTO Flights (FlightID, RouteID, AirplaneID, FlightNumber, DepartureDateTime, ArrivalDateTime)
+VALUES ('FL' || FlightID_SeqProcedure.NEXTVAL, 'R001', 'AP001', 'NY-LA-1003', 
+        TO_DATE('2024-09-10 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), 
+        TO_DATE('2024-09-10 16:00:00', 'YYYY-MM-DD HH24:MI:SS'));
+
+

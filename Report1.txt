@@ -1,0 +1,127 @@
+-- Set up formatting for the report
+SET LINESIZE 180
+SET PAGESIZE 150
+SET SERVEROUTPUT ON
+
+-- Title formatting for the report
+TTITLE LEFT 'Detailed Report of Revenue and Booking Count from All Campaigns' SKIP 2
+
+REPFOOTER SKIP 1 LEFT '--End of Report--';
+
+CREATE OR REPLACE VIEW CampaignRevenueView AS
+SELECT 
+  C.CampaignID AS CampaignID,  -- Include CampaignID here
+  C.CampaignName AS CampaignName, 
+  COUNT(B.BookingID) AS TotalBookings, 
+  SUM(B.TotalPrice) AS TotalRevenue,
+  RANK() OVER (ORDER BY SUM(B.TotalPrice) DESC) AS RevenueRank
+FROM Campaign C
+JOIN Promotions P ON C.CampaignID = P.CampaignID
+JOIN Booking B ON P.PromotionID = B.PromotionID
+GROUP BY C.CampaignID, C.CampaignName  -- Include CampaignID in the GROUP BY
+ORDER BY TotalRevenue DESC;
+
+-- PL/SQL block to fetch and display data using nested cursor
+DECLARE
+    -- Cursor to fetch campaign revenue data
+    CURSOR campaign_cursor IS
+        SELECT 
+            CampaignID,
+            CampaignName,
+            TotalBookings,
+            TotalRevenue,
+            RevenueRank
+        FROM 
+            CampaignRevenueView;
+
+    -- Inner cursor to fetch the most expensive booking details for each campaign
+    CURSOR booking_cursor (p_CampaignID Campaign.CampaignID%TYPE) IS
+        SELECT BookingID, TotalPrice
+        FROM (
+            SELECT BookingID, TotalPrice,
+                   ROW_NUMBER() OVER (ORDER BY TotalPrice DESC) AS rn
+            FROM Booking
+            JOIN Promotions ON Booking.PromotionID = Promotions.PromotionID
+            WHERE Promotions.CampaignID = p_CampaignID
+        ) WHERE rn = 1;  -- Selects only the most expensive booking
+
+    -- Variables to hold campaign cursor values
+    v_CampaignID       Campaign.CampaignID%TYPE;
+    v_CampaignName     CampaignRevenueView.CampaignName%TYPE;
+    v_TotalBookings    CampaignRevenueView.TotalBookings%TYPE;
+    v_TotalRevenue     CampaignRevenueView.TotalRevenue%TYPE;
+    v_RevenueRank      CampaignRevenueView.RevenueRank%TYPE;
+    v_BookingDetails   VARCHAR2(4000); -- Variable to hold the most expensive booking details
+
+    -- Variables to hold booking cursor values
+    v_BookingID        Booking.BookingID%TYPE;
+    v_BookingPrice     NUMBER;
+    v_TotalRevenueSum  NUMBER;
+BEGIN
+    -- Output report header with column names
+    DBMS_OUTPUT.PUT_LINE('Detailed Report of Revenue and Booking Count from All Campaigns');
+    DBMS_OUTPUT.PUT_LINE('--------------------------------------------------------------------------------------------------------------');
+    DBMS_OUTPUT.PUT_LINE(
+        RPAD('Campaign Name', 24) ||
+        LPAD('Total Bookings', 15) ||
+        LPAD('Total Revenue', 20) ||
+        LPAD('Rank by Revenue', 20) ||
+        LPAD('Most Revenue Bookings', 30)
+    );
+    DBMS_OUTPUT.PUT_LINE('--------------------------------------------------------------------------------------------------------------');
+
+    -- Open the outer cursor
+    OPEN campaign_cursor;
+
+    -- Fetch data and display results for each campaign
+    LOOP
+        FETCH campaign_cursor INTO v_CampaignID, v_CampaignName, v_TotalBookings, v_TotalRevenue, v_RevenueRank;
+        EXIT WHEN campaign_cursor%NOTFOUND;
+
+        -- Open the inner cursor for the current campaign
+        OPEN booking_cursor(v_CampaignID);
+
+        -- Fetch the most expensive booking details for the current campaign
+        FETCH booking_cursor INTO v_BookingID, v_BookingPrice;
+        IF NOT booking_cursor%NOTFOUND THEN
+            -- Format the booking details
+            v_BookingDetails := 'ID:' || v_BookingID || ' $' || TO_CHAR(v_BookingPrice, '999,999.99');
+        END IF;
+
+        -- Close the inner cursor
+        CLOSE booking_cursor;
+
+        -- Display each campaign's summary including the most expensive booking details
+        DBMS_OUTPUT.PUT_LINE(
+            RPAD(v_CampaignName, 24) ||
+            LPAD(TO_CHAR(v_TotalBookings), 15) ||
+            LPAD(TO_CHAR(v_TotalRevenue, '$999,999,999.99'), 20) ||
+            LPAD(TO_CHAR(v_RevenueRank), 20) ||
+            LPAD(v_BookingDetails, 30)
+        );
+    END LOOP;
+
+    -- Close the outer cursor
+    CLOSE campaign_cursor;
+
+    -- Calculate and display total revenue
+    SELECT 
+        SUM(TotalRevenue)
+    INTO 
+        v_TotalRevenueSum
+    FROM 
+        CampaignRevenueView;
+  DBMS_OUTPUT.PUT_LINE('--------------------------------------------------------------------------------------------------------------');
+    DBMS_OUTPUT.PUT_LINE(
+        RPAD('Total Revenue', 31) || ' ' ||
+        RPAD('   ', 10) || ' ' ||
+        RPAD(TO_CHAR(v_TotalRevenueSum, '$999,999,999.99'), 20) || ' ' ||
+        RPAD('', 15)
+    );
+
+DBMS_OUTPUT.PUT_LINE('--------------------------------------------------------------------------------------------------------------');
+    -- End of PL/SQL block
+END;
+/
+TTITLE OFF
+REPFOOTER OFF

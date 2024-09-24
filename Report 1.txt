@@ -1,0 +1,116 @@
+SET LINESIZE 200
+SET PAGESIZE 200
+SET HEADING OFF
+SET NEWPAGE 1
+
+SET SERVEROUTPUT ON
+
+COLUMN MemberID FORMAT A10 HEADING 'Member ID'
+COLUMN FirstName FORMAT A15 HEADING 'First Name'
+COLUMN LastName FORMAT A15 HEADING 'Last Name'
+COLUMN MembershipLevel FORMAT A15 HEADING 'Membership Level'
+COLUMN CustomerSegment FORMAT A15 HEADING 'Customer Segment'
+COLUMN BookingFrequency FORMAT A15 HEADING 'Booking Frequency'
+COLUMN TotalRevenue FORMAT 999,999,999.99 HEADING 'Total Revenue'
+COLUMN CLTV FORMAT 999,999,999.99 HEADING 'CLTV (Annual Avg)'
+
+DECLARE
+  CURSOR cur_members IS
+    SELECT
+        m.MemberID,
+        m.FirstName,
+        m.LastName,
+        m.MembershipLevel,
+        m.MembershipDate
+    FROM
+        Members m;
+
+  CURSOR cur_details(p_member_id VARCHAR2) IS
+    WITH CustomerRevenue AS (
+        SELECT
+            NVL(SUM(b.TotalPrice), 0) AS TotalRevenue,
+            NVL(COUNT(b.BookingID), 0) AS TotalBookings,
+            MAX(b.BookingDate) AS LastBookingDate
+        FROM
+            Booking b
+        WHERE
+            b.MemberID = p_member_id
+        GROUP BY
+            b.MemberID
+    )
+    SELECT
+        CASE
+            WHEN cr.TotalRevenue >= 5000 THEN 'High Value'
+            WHEN cr.TotalRevenue BETWEEN 2000 AND 4999 THEN 'Medium Value'
+            ELSE 'Low Value'
+        END AS CustomerSegment,
+        CASE
+            WHEN cr.TotalBookings >= 10 THEN 'Frequent'
+            WHEN cr.TotalBookings BETWEEN 5 AND 9 THEN 'Moderate'
+            ELSE 'Infrequent'
+        END AS BookingFrequency,
+        cr.TotalRevenue,
+        CASE
+            WHEN EXTRACT(YEAR FROM TO_DATE('01-JAN-2027', 'DD-MON-YYYY')) - EXTRACT(YEAR FROM m.MembershipDate) + 1 = 0 THEN 0
+            ELSE ROUND(cr.TotalRevenue / (EXTRACT(YEAR FROM TO_DATE('01-JAN-2027', 'DD-MON-YYYY')) - EXTRACT(YEAR FROM m.MembershipDate) + 1), 2)
+        END AS CLTV
+    FROM
+        CustomerRevenue cr, Members m
+    WHERE
+        m.MemberID = p_member_id;
+
+  rec_member cur_members%ROWTYPE;
+  rec_detail cur_details%ROWTYPE;
+
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('|' || RPAD('-', 141, '-') || '|');
+  DBMS_OUTPUT.PUT_LINE('|' || RPAD(' ', 55) || RPAD('Customer Lifetime Value Report', 86, ' ') || '|');
+  DBMS_OUTPUT.PUT_LINE('|' || RPAD(' ', 120) || RPAD('Date: ' || TO_CHAR(TO_DATE('01-JAN-2027', 'DD-MON-YYYY'), 'DD-MON-YYYY'), 21, ' ') || '|');
+  DBMS_OUTPUT.PUT_LINE('|' || RPAD('-', 141, '-') || '|');
+  DBMS_OUTPUT.PUT_LINE(' ');  -- Add some space
+
+  DBMS_OUTPUT.PUT_LINE(
+    'Member ID  | First Name     | Last Name      | Membership Level | Customer Segment | Booking Frequency | Total Revenue    | CLTV (Annual Avg) |'
+  );
+  DBMS_OUTPUT.PUT_LINE(
+    '-----------------------------------------------------------------------------------------------------------------------------------------------'
+  );
+
+  OPEN cur_members;
+
+  LOOP
+    FETCH cur_members INTO rec_member;
+    EXIT WHEN cur_members%NOTFOUND;
+
+    OPEN cur_details(rec_member.MemberID);
+
+    FETCH cur_details INTO rec_detail;
+
+    DBMS_OUTPUT.PUT_LINE(
+      RPAD(rec_member.MemberID, 10) || ' | ' ||
+      RPAD(rec_member.FirstName, 14) || ' | ' ||
+      RPAD(rec_member.LastName, 14) || ' | ' ||
+      RPAD(rec_member.MembershipLevel, 16) || ' | ' ||
+      RPAD(NVL(rec_detail.CustomerSegment, 'Unknown'), 16) || ' | ' ||
+      RPAD(NVL(rec_detail.BookingFrequency, 'Unknown'), 17) || ' | ' ||
+      LPAD(TO_CHAR(NVL(rec_detail.TotalRevenue, 0), '999,999,999.99'), 16) || ' | ' ||
+      LPAD(TO_CHAR(NVL(rec_detail.CLTV, 0), '999,999,999.99'), 17) || ' | '
+    );
+
+    CLOSE cur_details;
+  END LOOP;
+
+  CLOSE cur_members;
+
+  -- Print end of report footer
+  DBMS_OUTPUT.PUT_LINE(
+    '-----------------------------------------------------------------------------------------------------------------------------------------------'
+  );
+  DBMS_OUTPUT.PUT_LINE('|' || RPAD(' ', 63) || RPAD('END OF REPORT', 78, ' ') || '|');
+  DBMS_OUTPUT.PUT_LINE(
+    '-----------------------------------------------------------------------------------------------------------------------------------------------'
+  );
+END;
+/
+
+SET HEADING ON

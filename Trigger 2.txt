@@ -1,0 +1,98 @@
+
+DROP SEQUENCE claim_seq;
+
+CREATE SEQUENCE claim_seq
+START WITH 1
+INCREMENT BY 1;
+
+
+
+DROP INDEX idx_policy_claims;
+
+CREATE INDEX idx_policy_claims ON Claim(PolicyID);
+
+
+
+DROP FUNCTION fn_total_claims;
+
+CREATE OR REPLACE FUNCTION fn_total_claims(p_policy_id VARCHAR)
+RETURN NUMBER
+IS
+    v_total_claims NUMBER;
+BEGIN
+    SELECT SUM(ClaimAmount) INTO v_total_claims
+    FROM Claim
+    WHERE PolicyID = p_policy_id;
+    RETURN NVL(v_total_claims, 0);
+END;
+/
+
+
+
+DROP TRIGGER trg_check_claim_limit;
+
+CREATE OR REPLACE TRIGGER trg_check_claim_limit
+BEFORE INSERT OR UPDATE ON Claim
+FOR EACH ROW
+DECLARE
+    v_coverage_amount NUMBER;
+    v_total_claims NUMBER;
+    v_new_claim_id VARCHAR2(10);
+BEGIN
+
+    IF INSERTING THEN
+        SELECT 'CLAIM_' || claim_seq.NEXTVAL INTO v_new_claim_id FROM dual;
+        :NEW.ClaimID := v_new_claim_id;
+    END IF;
+
+    SELECT CoverageAmount INTO v_coverage_amount
+    FROM InsurancePolicy
+    WHERE PolicyID = :NEW.PolicyID;
+
+    SELECT NVL(SUM(ClaimAmount), 0) INTO v_total_claims
+    FROM Claim
+    WHERE PolicyID = :NEW.PolicyID;
+
+    IF UPDATING THEN
+        v_total_claims := v_total_claims - :OLD.ClaimAmount;
+    END IF;
+
+    IF v_total_claims + :NEW.ClaimAmount > v_coverage_amount THEN
+        DBMS_OUTPUT.PUT_LINE('Error: Claim amount exceeds coverage limit.');
+        RAISE_APPLICATION_ERROR(-20002, 'Claim amount exceeds coverage limit.');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error in trg_check_claim_limit: ' || SQLERRM);
+        RAISE;
+END;
+/
+
+
+
+DROP VIEW v_policy_claims;
+
+CREATE OR REPLACE VIEW v_policy_claims AS
+SELECT PolicyID, SUM(ClaimAmount) AS TotalClaims
+FROM Claim
+GROUP BY PolicyID;
+
+
+INSERT INTO Claim (ClaimID, PolicyID, ClaimDate, ClaimAmount, Status)
+VALUES ('CL121', 'IP002', TO_DATE('2031-05-01', 'YYYY-MM-DD'), 1500000, 'Pending');
+
+
+SELECT * FROM v_policy_claims;
+
+
+SELECT TotalClaims
+FROM v_policy_claims
+WHERE PolicyID = 'IP002';
+
+
+SELECT p.PolicyID, p.CoverageAmount, NVL(v.TotalClaims, 0) AS TotalClaims
+FROM InsurancePolicy p
+JOIN v_policy_claims v ON p.PolicyID = v.PolicyID
+WHERE p.PolicyID = 'IP002';
+
+

@@ -1,0 +1,101 @@
+-- Set up formatting for the report
+SET LINESIZE 200
+SET PAGESIZE 200
+SET SERVEROUTPUT ON
+
+-- Drop the trigger, sequence, and table if they already exist
+DROP TRIGGER UpdatePromotion;
+DROP TABLE n_Notifications;
+DROP SEQUENCE Promotions_Seq;
+
+-- Create sequence for NotificationID
+CREATE SEQUENCE Promotions_Seq
+START WITH 121
+INCREMENT BY 1
+NOCACHE
+NOCYCLE;
+
+-- Create table for notifications with NotificationID
+CREATE TABLE n_Notifications (
+    MemberID VARCHAR2(10),
+    Message VARCHAR2(255),
+    NotificationDate DATE
+);
+
+-- Create or replace trigger for INSERT, UPDATE, and DELETE on Promotions
+CREATE OR REPLACE TRIGGER UpdatePromotion
+AFTER INSERT OR UPDATE OR DELETE ON Promotions
+FOR EACH ROW
+BEGIN
+    -- Handle INSERT operation
+    IF INSERTING THEN
+        -- Notify members about the new promotion
+        INSERT INTO n_Notifications (MemberID, Message, NotificationDate)
+        SELECT MemberID, 
+               'A new promotion has been added. Promotion ends on: ' || TO_CHAR(:NEW.EndDate, 'DD-MON-YYYY'), 
+               SYSDATE
+        FROM Booking
+        WHERE PromotionID = :NEW.PromotionID;
+    END IF;
+
+    -- Handle UPDATE operation
+    IF UPDATING THEN
+        -- Update the PromotionID in the Booking table if the promotion details change
+        IF :OLD.PromotionID != :NEW.PromotionID THEN
+            UPDATE Booking
+            SET PromotionID = :NEW.PromotionID
+            WHERE PromotionID = :OLD.PromotionID;
+        END IF;
+
+        -- Notify members about changes in the promotion's end date
+        IF :OLD.EndDate != :NEW.EndDate THEN
+            INSERT INTO n_Notifications (MemberID, Message, NotificationDate)
+            SELECT MemberID, 
+                   'The promotion has been updated. New end date: ' || TO_CHAR(:NEW.EndDate, 'DD-MON-YYYY'), 
+                   SYSDATE
+            FROM Booking
+            WHERE PromotionID = :NEW.PromotionID;
+        END IF;
+    END IF;
+
+    -- Handle DELETE operation
+    IF DELETING THEN
+        -- Notify members about the promotion being deleted
+        INSERT INTO n_Notifications (MemberID, Message, NotificationDate)
+        SELECT MemberID, 
+               'The promotion has been removed. Please check for other available promotions.', 
+               SYSDATE
+        FROM Booking
+        WHERE PromotionID = :OLD.PromotionID;
+
+        -- Set the PromotionID to NULL in Booking table for the deleted promotion
+        UPDATE Booking
+        SET PromotionID = NULL
+        WHERE PromotionID = :OLD.PromotionID;
+    END IF;
+END;
+/
+
+--Demonstration to show Trigger is worktable
+--Insert
+-- Insert a new promotion into the Promotions table
+INSERT INTO Promotions (PromotionID, CampaignID, PromotionCode, StartDate, EndDate, DiscountPercentage)
+VALUES ('PR' || Promotions_Seq.NEXTVAL, 'C022', 'HOLIDAY2024', TO_DATE('2025-3-01', 'YYYY-MM-DD'), TO_DATE('2025-3-31', 'YYYY-MM-DD'), 15);
+
+--Select and display total number of promotions records
+select * From Promotions
+Where PromotionID = 'PR121';
+
+--Update
+UPDATE Promotions
+SET DiscountPercentage = 55, EndDate = TO_DATE('2026-1-11', 'YYYY-MM-DD')
+WHERE PromotionID = 'PR121';
+
+--Select and display total number of promotions records
+select * From Promotions
+Where PromotionID = 'PR121';
+
+--Delete
+-- Delete the promotion to test the DELETE operation
+DELETE FROM Promotions
+WHERE PromotionID = 'PR121';

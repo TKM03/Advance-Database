@@ -1,0 +1,100 @@
+ALTER SESSION SET NLS_DATE_FORMAT='YYYY-MM-DD';
+
+SET LINESIZE 200
+
+SET SERVEROUTPUT ON;
+
+DROP SEQUENCE membership_level_seq;
+
+CREATE SEQUENCE membership_level_seq
+START WITH 1
+INCREMENT BY 1;
+
+
+
+DROP INDEX idx_member_bookings;
+
+CREATE INDEX idx_member_bookings ON Booking(MemberID);
+
+
+
+DROP TRIGGER trg_update_membership_level;
+
+CREATE OR REPLACE FUNCTION GetMembershipLevel(p_total_bookings IN NUMBER)
+RETURN VARCHAR2 IS
+    v_membership_level VARCHAR2(50);
+BEGIN
+    IF p_total_bookings < 5 THEN
+        v_membership_level := 'Bronze';
+    ELSIF p_total_bookings BETWEEN 5 AND 10 THEN
+        v_membership_level := 'Silver';
+    ELSIF p_total_bookings BETWEEN 10 AND 13 THEN
+        v_membership_level := 'Gold';
+    ELSIF p_total_bookings > 13 THEN
+        v_membership_level := 'Platinum';
+    ELSE
+        RAISE_APPLICATION_ERROR(-20001, 'Invalid number of bookings.');
+    END IF;
+
+    RETURN v_membership_level;
+END;
+/
+
+
+
+DROP TRIGGER trg_update_membership_level;
+
+CREATE OR REPLACE TRIGGER trg_update_membership_level
+FOR INSERT ON Booking
+COMPOUND TRIGGER
+
+    v_total_bookings NUMBER;
+    v_membership_level VARCHAR2(50);
+
+    AFTER STATEMENT IS
+    BEGIN
+
+        FOR rec IN (SELECT MemberID, COUNT(*) AS TotalBookings
+                    FROM Booking
+                    GROUP BY MemberID) LOOP
+
+            v_total_bookings := rec.TotalBookings;
+            v_membership_level := GetMembershipLevel(v_total_bookings);
+
+            UPDATE Members
+            SET MembershipLevel = v_membership_level
+            WHERE MemberID = rec.MemberID;
+
+        END LOOP;
+    END AFTER STATEMENT;
+
+END trg_update_membership_level;
+/
+
+
+DROP VIEW v_member_booking_summary;
+
+CREATE OR REPLACE VIEW v_member_booking_summary AS
+SELECT MemberID, COUNT(*) AS TotalBookings
+FROM Booking
+GROUP BY MemberID;
+
+
+
+INSERT INTO Booking VALUES ('B121', 'PR100', 'M010', 1699.98, '2024-02-01');
+INSERT INTO Booking VALUES ('B122', 'PR090', 'M010', 1699.98, '2024-02-02');
+INSERT INTO Booking VALUES ('B123', 'PR080', 'M010', 1699.98, '2024-02-03');
+INSERT INTO Booking VALUES ('B124', 'PR070', 'M010', 1699.98, '2024-02-04');
+INSERT INTO Booking VALUES ('B125', 'PR060', 'M010', 1699.98, '2024-02-05');
+INSERT INTO Booking VALUES ('B126', 'PR050', 'M010', 1699.98, '2024-02-06');
+INSERT INTO Booking VALUES ('B127', 'PR050', 'M010', 1699.98, '2024-02-07');
+INSERT INTO Booking VALUES ('B128', 'PR050', 'M010', 1699.98, '2024-02-08');
+INSERT INTO Booking VALUES ('B129', 'PR050', 'M010', 1699.98, '2024-02-09');
+INSERT INTO Booking VALUES ('B130', 'PR050', 'M010', 1699.98, '2024-02-10');
+
+
+SELECT MemberID, FirstName, LastName, MembershipLevel
+FROM Members
+WHERE MemberID = 'M010';
+
+SELECT * FROM Booking WHERE MemberID = 'M010';
